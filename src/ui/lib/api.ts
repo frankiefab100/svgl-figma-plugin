@@ -1,19 +1,27 @@
-// NO fetch() calls here.
-// The Figma plugin iframe cannot reach external domains directly.
-// All network requests go through code.ts (the main thread).
-// This file only contains:
-//   1. Helpers that work on already-fetched data
-//   2. The postMessage bridge to request data from code.ts
+// Helper functions and message bridge for UI <-> Plugin sandbox communication.
 
 import type { SVGLogo } from "../../types/svgl";
 
-/** Resolve a logo's SVG URL for a given variant */
+/** Normalize svgl.app URLs to jsDelivr CDN with proper CORS and caching */
+export function toCdnUrl(url: string): string {
+  if (!url) return url;
+  const clean = url.trim();
+  if (clean.includes("svgl.app")) {
+    const filename = clean.split("/").pop()?.replace(/\?.*$/, "");
+    if (filename && filename.endsWith(".svg")) {
+      return `https://cdn.jsdelivr.net/gh/pheralb/svgl@main/static/library/${filename}`;
+    }
+  }
+  return clean;
+}
+
+/** Resolve a logo's SVG URL for a given variant, routed through CORS-enabled CDN */
 export function resolveLogoUrl(
   route: string | { light: string; dark: string },
   variant: "light" | "dark" = "light"
 ): string {
-  if (typeof route === "string") return route;
-  return variant === "dark" ? route.dark : route.light;
+  const raw = typeof route === "string" ? route : (variant === "dark" ? route.dark : route.light);
+  return toCdnUrl(raw);
 }
 
 /** Check if a logo has separate light/dark variants */

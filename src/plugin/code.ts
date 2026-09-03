@@ -57,6 +57,28 @@ async function proxyJSON(url: string, successType: "LOGOS_DATA" | "CATEGORIES_DA
   }
 }
 
+// Convert svgl.app URL to CORS-enabled jsDelivr CDN
+function toCdnUrl(url: string): string {
+  if (!url) return url;
+  const clean = url.trim();
+  if (clean.includes("svgl.app")) {
+    const filename = clean.split("/").pop()?.replace(/\?.*$/, "");
+    if (filename && filename.endsWith(".svg")) {
+      return `https://cdn.jsdelivr.net/gh/pheralb/svgl@main/static/library/${filename}`;
+    }
+  }
+  return clean;
+}
+
+// Fallback: GitHub Raw CDN
+function toRawGithubUrl(url: string): string {
+  const filename = url.split("/").pop()?.replace(/\?.*$/, "");
+  if (filename && filename.endsWith(".svg")) {
+    return `https://raw.githubusercontent.com/pheralb/svgl/main/static/library/${filename}`;
+  }
+  return url;
+}
+
 // Sanitise SVG text for Figma
 function sanitizeSVG(raw: string): string {
   let svg = raw
@@ -67,59 +89,95 @@ function sanitizeSVG(raw: string): string {
     .replace(/url\(['"]?https?:\/\/[^'")\s]+['"]?\)/gi, "none")
     .trim();
 
-  // Ensure explicit pixel dimensions so Figma can size the node
-  const hasW = /width=["']\d/.test(svg);
-  const hasH = /height=["']\d/.test(svg);
+  // Parse natural viewBox
+  const vbMatch = svg.match(/viewBox=["']\s*([\d.-]+)[\s,]+([\d.-]+)[\s,]+([\d.-]+)[\s,]+([\d.-]+)\s*["']/i);
+  const vbW = vbMatch ? parseFloat(vbMatch[3]) : 0;
+  const vbH = vbMatch ? parseFloat(vbMatch[4]) : 0;
 
-  if (!hasW || !hasH) {
-    const vbMatch = svg.match(/viewBox=["']\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*["']/);
-    if (vbMatch) {
-      const vw = parseFloat(vbMatch[3]);
-      const vh = parseFloat(vbMatch[4]);
-      if (vw > 0 && vh > 0) {
-        if (!hasW) svg = svg.replace(/<svg/, `<svg width="${vw}"`);
-        if (!hasH) svg = svg.replace(/<svg/, `<svg height="${vh}"`);
-      }
-    } else {
-      if (!hasW) svg = svg.replace(/<svg/, '<svg width="100"');
-      if (!hasH) svg = svg.replace(/<svg/, '<svg height="100"');
-    }
+  // Check existing width / height
+  const wMatch = svg.match(/\bwidth=["']([0-9.]+)(px)?["']/i);
+  const hMatch = svg.match(/\bheight=["']([0-9.]+)(px)?["']/i);
+
+  const finalW = wMatch ? parseFloat(wMatch[1]) : (vbW > 0 ? vbW : 100);
+  const finalH = hMatch ? parseFloat(hMatch[1]) : (vbH > 0 ? vbH : 100);
+
+  const hasValidW = /\bwidth=["'][0-9.]+(px)?["']/i.test(svg);
+  const hasValidH = /\bheight=["'][0-9.]+(px)?["']/i.test(svg);
+
+  if (!hasValidW || !hasValidH) {
+    svg = svg.replace(/\s*\bwidth=["'][^"']*["']/gi, "");
+    svg = svg.replace(/\s*\bheight=["'][^"']*["']/gi, "");
+    svg = svg.replace(/<svg/i, `<svg width="${finalW}" height="${finalH}"`);
+  }
+
+  if (!vbMatch && finalW > 0 && finalH > 0) {
+    svg = svg.replace(/<svg/i, `<svg viewBox="0 0 ${finalW} ${finalH}"`);
   }
 
   return svg;
 }
 
-// Fetch raw bytes from a URL
-async function fetchBytes(url: string): Promise<Uint8Array> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const buf = await res.arrayBuffer();
-  return new Uint8Array(buf);
-}
-
-// Fetch SVG text
+// Fetch SVG text with CDN resolution and automatic fallbacks
 async function fetchSVGText(url: string): Promise<string> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return sanitizeSVG(await res.text());
+  const cdnUrl = toCdnUrl(url);
+
+  // 1. Try jsDelivr CDN (global caching, 100% CORS headers)
+  try {
+    const res = await fetch(cdnUrl);
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.includes("<svg")) {
+        return sanitizeSVG(text);
+      }
+    }
+  } catch (err) {
+    console.warn(`[SVGL] jsDelivr CDN fetch failed for ${cdnUrl}: ${errMsg(err)}`);
+  }
+
+  // 2. Fallback to raw.githubusercontent.com
+  try {
+    const rawUrl = toRawGithubUrl(url);
+    const res = await fetch(rawUrl);
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.includes("<svg")) {
+        return sanitizeSVG(text);
+      }
+    }
+  } catch (err) {
+    console.warn(`[SVGL] GitHub Raw fetch failed for ${url}: ${errMsg(err)}`);
+  }
+
+  // 3. Last resort: try original URL directly
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    if (!text || !text.includes("<svg")) throw new Error("Invalid SVG content");
+    return sanitizeSVG(text);
+  } catch (err) {
+    throw new Error(`Failed to fetch SVG: ${errMsg(err)}`);
+  }
 }
 
 // Parse viewBox / width / height to get natural aspect ratio
 function getSVGDimensions(svg: string): { w: number; h: number } {
-  const vbMatch = svg.match(/viewBox=["']\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*["']/);
-  if (vbMatch) return { w: parseFloat(vbMatch[3]), h: parseFloat(vbMatch[4]) };
+  const vbMatch = svg.match(/viewBox=["']\s*([\d.-]+)[\s,]+([\d.-]+)[\s,]+([\d.-]+)[\s,]+([\d.-]+)\s*["']/i);
+  if (vbMatch) {
+    const w = parseFloat(vbMatch[3]);
+    const h = parseFloat(vbMatch[4]);
+    if (w > 0 && h > 0) return { w, h };
+  }
 
-  const wMatch = svg.match(/width=["']([\d.]+)["']/);
-  const hMatch = svg.match(/height=["']([\d.]+)["']/);
+  const wMatch = svg.match(/\bwidth=["']([0-9.]+)["']/i);
+  const hMatch = svg.match(/\bheight=["']([0-9.]+)["']/i);
   const w = wMatch ? parseFloat(wMatch[1]) : 100;
   const h = hMatch ? parseFloat(hMatch[1]) : 100;
   return { w: w > 0 ? w : 100, h: h > 0 ? h : 100 };
 }
 
-// Strategy 1: createNodeFromSvg
+// Create vector node via createNodeFromSvg with proportional scaling
 async function tryCreateNodeFromSvg(svgText: string, name: string, size: number): Promise<FrameNode> {
-  // createNodeFromSvg throws a plain object on failure (not an Error)
-  // so we catch everything and re-throw with a useful message
   let node: FrameNode;
   try {
     node = figma.createNodeFromSvg(svgText);
@@ -129,7 +187,14 @@ async function tryCreateNodeFromSvg(svgText: string, name: string, size: number)
 
   node.name = name;
 
-  const w = node.width  > 0 ? node.width  : getSVGDimensions(svgText).w;
+  // Ensure all child vectors have SCALE constraints so resize scales the artwork
+  for (const child of node.children) {
+    if ("constraints" in child) {
+      child.constraints = { horizontal: "SCALE", vertical: "SCALE" };
+    }
+  }
+
+  const w = node.width > 0 ? node.width : getSVGDimensions(svgText).w;
   const h = node.height > 0 ? node.height : getSVGDimensions(svgText).h;
   const scale = size / Math.max(w, h);
   const tw = Math.max(1, Math.round(w * scale));
@@ -138,51 +203,14 @@ async function tryCreateNodeFromSvg(svgText: string, name: string, size: number)
   return node;
 }
 
-// ─── Strategy 2: SVG as image fill (fallback for complex SVGs) ────────────────
-// Figma can render any SVG perfectly as an image — gradients, masks, filters all work.
-// The trade-off is it becomes a raster-like image fill rather than editable vectors.
-async function tryCreateImageFromSvg(svgUrl: string, name: string, size: number, svgText: string): Promise<RectangleNode> {
-  const dims = getSVGDimensions(svgText);
-  const scale = size / Math.max(dims.w, dims.h);
-  const tw = Math.max(1, Math.round(dims.w * scale));
-  const th = Math.max(1, Math.round(dims.h * scale));
-
-  // Fetch as raw bytes for figma.createImage
-  const bytes = await fetchBytes(svgUrl);
-  const image = figma.createImage(bytes);
-
-  const rect = figma.createRectangle();
-  rect.name = name;
-  rect.resize(tw, th);
-  rect.fills = [{
-    type: "IMAGE",
-    scaleMode: "FIT",
-    imageHash: image.hash,
-  }];
-  return rect;
-}
-
-// Main import: try vector first, fall back to image
+// Main logo node creation
 async function createLogoNode(
   svgUrl: string,
   name: string,
   size: number
-): Promise<FrameNode | RectangleNode> {
+): Promise<FrameNode> {
   const svgText = await fetchSVGText(svgUrl);
-
-  // First try: editable vectors via createNodeFromSvg
-  try {
-    return await tryCreateNodeFromSvg(svgText, name, size);
-  } catch (e1) {
-    console.warn(`[SVGL] createNodeFromSvg failed for "${name}", falling back to image: ${errMsg(e1)}`);
-  }
-
-  // Second try: SVG as image fill — works for ALL SVGs including gradients
-  try {
-    return await tryCreateImageFromSvg(svgUrl, name, size, svgText);
-  } catch (e2) {
-    throw new Error(`Both import methods failed. Last error: ${errMsg(e2)}`);
-  }
+  return await tryCreateNodeFromSvg(svgText, name, size);
 }
 
 // Place a node on the page
@@ -191,7 +219,7 @@ function placeNode(node: SceneNode & { width: number; height: number }, placemen
 
   if (sel.length === 1 && sel[0].type === "FRAME") {
     const frame = sel[0] as FrameNode;
-    (node as FrameNode).x = (frame.width  - node.width)  / 2;
+    (node as FrameNode).x = (frame.width - node.width) / 2;
     (node as FrameNode).y = (frame.height - node.height) / 2;
     frame.appendChild(node);
     return;
@@ -199,7 +227,7 @@ function placeNode(node: SceneNode & { width: number; height: number }, placemen
 
   figma.currentPage.appendChild(node);
   if (placement === "cursor") {
-    (node as FrameNode).x = figma.viewport.center.x - node.width  / 2;
+    (node as FrameNode).x = figma.viewport.center.x - node.width / 2;
     (node as FrameNode).y = figma.viewport.center.y - node.height / 2;
   } else {
     (node as FrameNode).x = 100;
@@ -227,7 +255,7 @@ async function importSingle(payload: {
       figma.currentPage.appendChild(comp);
 
       if (placement === "cursor") {
-        comp.x = figma.viewport.center.x - comp.width  / 2;
+        comp.x = figma.viewport.center.x - comp.width / 2;
         comp.y = figma.viewport.center.y - comp.height / 2;
       } else {
         comp.x = 100; comp.y = 100;
@@ -263,7 +291,7 @@ async function importBatch(payload: {
   placement: "cursor" | "new-page";
 }) {
   const { logos, size, layout, columns, spacing, placement } = payload;
-  const nodes: (FrameNode | RectangleNode)[] = [];
+  const nodes: FrameNode[] = [];
   const failed: string[] = [];
 
   for (const logo of logos) {
@@ -282,8 +310,8 @@ async function importBatch(payload: {
     return;
   }
 
-  const cols  = layout === "row" ? nodes.length : columns;
-  const gridW = cols  * (size + spacing) - spacing;
+  const cols = layout === "row" ? nodes.length : columns;
+  const gridW = cols * (size + spacing) - spacing;
   const gridH = Math.ceil(nodes.length / cols) * (size + spacing) - spacing;
   const baseX = (placement === "cursor" ? figma.viewport.center.x : 100 + gridW / 2) - gridW / 2;
   const baseY = (placement === "cursor" ? figma.viewport.center.y : 100 + gridH / 2) - gridH / 2;
