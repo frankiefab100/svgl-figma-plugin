@@ -1,0 +1,26 @@
+{
+  "name": "svgl-figma",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:ui":   "vite build --config vite.config.ts",
+    "build:code": "vite build --config vite.code.config.ts",
+    "build":      "npm run build:ui && npm run build:code",
+    "dev":        "npm run build -- --watch"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.125.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

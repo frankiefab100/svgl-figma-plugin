@@ -1,0 +1,13 @@
+{
+  "name": "SVGL — Logo Library",
+  "id": "svgl-logo-library",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/index.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["https://api.svgl.app","https://svgl.app"],
+    "reasoning": "This plugin fetches the SVG logo catalog from api.svgl.app and downloads individual SVG files from svgl.app/library/ to import them onto the Figma canvas."
+  }
+}
