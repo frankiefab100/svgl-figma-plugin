@@ -7,6 +7,8 @@ interface Props {
   logos: SVGLogo[];
   loading?: boolean;
   selected?: SVGLogo | null;
+  favIds?: Set<number> | number[];
+  onToggleFavorite?: (id: number) => void;
   onSelect: (l: SVGLogo) => void;
   onImport: (l: SVGLogo) => void;
   batchMode?: boolean;
@@ -14,8 +16,21 @@ interface Props {
   onToggleBatch?: (l: SVGLogo) => void;
 }
 
-export function LogoGrid({ logos, loading, selected, onSelect, onImport, batchMode, batchSelected, onToggleBatch }: Props) {
+export function LogoGrid({
+  logos,
+  loading,
+  selected,
+  favIds,
+  onToggleFavorite,
+  onSelect,
+  onImport,
+  batchMode,
+  batchSelected,
+  onToggleBatch,
+}: Props) {
   if (loading) return <LoadingGrid />;
+
+  const favSet = favIds instanceof Set ? favIds : new Set(favIds || []);
 
   return (
     <div style={s.grid} role="list">
@@ -24,6 +39,8 @@ export function LogoGrid({ logos, loading, selected, onSelect, onImport, batchMo
           <LogoCard
             logo={logo}
             selected={selected?.id === logo.id}
+            isFav={favSet.has(logo.id)}
+            onToggleFav={() => onToggleFavorite?.(logo.id)}
             batchMode={batchMode}
             batchSelected={batchSelected?.has(logo.id)}
             onSelect={() => onSelect(logo)}

@@ -32,11 +32,59 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
     case "IMPORT_LOGOS_BATCH":
       await importBatch(msg.payload);
       break;
+    case "GET_STORAGE":
+      await loadStorage();
+      break;
+    case "SET_FAVORITES":
+      try {
+        await figma.clientStorage.setAsync("svgl_favorites", msg.favorites);
+      } catch (e) {
+        console.warn("[SVGL] Failed to save favorites:", e);
+      }
+      break;
+    case "SET_RECENT":
+      try {
+        await figma.clientStorage.setAsync("svgl_recent", msg.recent);
+      } catch (e) {
+        console.warn("[SVGL] Failed to save recent:", e);
+      }
+      break;
+    case "SET_SETTINGS":
+      try {
+        await figma.clientStorage.setAsync("svgl_settings", msg.settings);
+      } catch (e) {
+        console.warn("[SVGL] Failed to save settings:", e);
+      }
+      break;
     case "CLOSE":
       figma.closePlugin();
       break;
   }
 };
+
+// Storage helper
+async function loadStorage() {
+  try {
+    const [recent, favorites, settings] = await Promise.all([
+      figma.clientStorage.getAsync("svgl_recent"),
+      figma.clientStorage.getAsync("svgl_favorites"),
+      figma.clientStorage.getAsync("svgl_settings"),
+    ]);
+    figma.ui.postMessage({
+      type: "STORAGE_LOADED",
+      payload: {
+        recent: Array.isArray(recent) ? recent : [],
+        favorites: Array.isArray(favorites) ? favorites : [],
+        settings: settings || null,
+      },
+    });
+  } catch (err) {
+    console.warn("[SVGL] Failed to load clientStorage:", err);
+  }
+}
+
+// Initial storage load
+loadStorage();
 
 // Proxy JSON → UI
 async function proxyJSON(url: string, successType: "LOGOS_DATA" | "CATEGORIES_DATA") {
