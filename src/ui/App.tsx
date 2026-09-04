@@ -423,8 +423,12 @@ export default function App() {
             {f === "all"
               ? "All Logos"
               : f === "recent"
-                ? "Recent"
-                : "Favorites"}
+                ? recent.length > 0
+                  ? `Recent (${recent.length})`
+                  : "Recent"
+                : favIds.length > 0
+                  ? `Favorites (${favIds.length})`
+                  : "Favorites"}
           </button>
         ))}
 
