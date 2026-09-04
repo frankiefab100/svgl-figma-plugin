@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { SVGLogo } from "../types/svgl";
+import type { SVGLogo, ImportSettings } from "../types/svgl";
 import type { PluginToUIMessage } from "../plugin/messages";
 import { resolveLogoUrl, sendToPlugin } from "./lib/api";
 import {
@@ -9,6 +9,7 @@ import {
   updateRecentCache,
   updateSettingsCache,
   clearRecentLogos,
+  DEFAULT_SETTINGS,
 } from "./lib/storage";
 import { useLogos } from "./hooks/useLogos";
 
@@ -52,6 +53,15 @@ export default function App() {
   const [batchMap, setBatchMap] = useState<Map<number, SVGLogo>>(new Map());
   const [batchMode, setBatchMode] = useState(false);
   const [importing, setImporting] = useState(false);
+  // Global theme settings
+  const [cfg, setCfg] = useState<ImportSettings>(() => ({
+    ...DEFAULT_SETTINGS,
+    theme: "light",
+  }));
+  // Apply theme to document root
+  useEffect(() => {
+    document.documentElement.dataset.theme = cfg.theme ?? "light";
+  }, [cfg.theme]);
 
   /* listen for replies from code.ts */
   useEffect(() => {
@@ -73,7 +83,9 @@ export default function App() {
               updateRecentCache(msg.payload.recent as SVGLogo[]);
             }
             if (msg.payload.settings) {
-              updateSettingsCache(msg.payload.settings as any);
+              const newSettings = msg.payload.settings as ImportSettings;
+              updateSettingsCache(newSettings);
+              setCfg((prev) => ({ ...prev, ...newSettings }));
             }
           }
           break;
@@ -343,19 +355,54 @@ export default function App() {
             <SettingsIcon />
           </IconBtn>
 
-          {/* Close */}
+          {/* Theme toggle */}
           <IconBtn
-            title="Close"
-            onClick={() => sendToPlugin({ type: "CLOSE" })}
+            title={cfg?.theme === "dark" ? "Light mode" : "Dark mode"}
+            onClick={() => {
+              const newTheme = cfg?.theme === "dark" ? "light" : "dark";
+              setCfg((prev) => ({ ...prev, theme: newTheme }));
+              sendToPlugin({
+                type: "SET_SETTINGS",
+                settings: { theme: newTheme },
+              });
+            }}
           >
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
-              <path
-                d="M4 4l8 8M12 4l-8 8"
+            {cfg?.theme === "dark" ? (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://w3.org"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="4" fill="none" />
+                <line x1="12" y1="2" x2="12" y2="4" />
+                <line x1="12" y1="20" x2="12" y2="22" />
+                <line x1="2" y1="12" x2="4" y2="12" />
+                <line x1="20" y1="12" x2="22" y2="12" />
+                <line x1="4.93" y1="4.93" x2="6.34" y2="6.34" />
+                <line x1="17.66" y1="17.66" x2="19.07" y2="19.07" />
+                <line x1="2.00" y1="19.07" x2="4.93" y2="16.14" />
+                <line x1="19.07" y1="4.93" x2="16.14" y2="7.86" />
+              </svg>
+            )}
           </IconBtn>
         </div>
       </div>

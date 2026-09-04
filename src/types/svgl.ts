@@ -28,6 +28,7 @@ export interface ImportSettings {
   importMode: ImportMode;
   placement: PlacementMode;
   cacheEnabled: boolean;
+  theme?: "light" | "dark";
 }
 
 export interface BatchImportItem {

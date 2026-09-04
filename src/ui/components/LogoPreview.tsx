@@ -33,7 +33,6 @@ export function LogoPreview({
   const [size, setSize] = useState(cfg.defaultSize);
   const [mode, setMode] = useState(cfg.importMode);
   const [placement, setPlacement] = useState(cfg.placement);
-  const [darkBg, setDarkBg] = useState(false);
 
   const supportsVariants = hasVariants(logo.route);
   const svgUrl = resolveLogoUrl(logo.route, variant);
@@ -58,52 +57,35 @@ export function LogoPreview({
       </div>
 
       {/* Preview canvas */}
-      <div
-        style={{ ...s.canvas, background: darkBg ? "#1a1a1a" : "var(--bg2)" }}
-      >
+      <div style={s.canvas}>
         <img src={svgUrl} alt={logo.title} style={s.previewImg} />
-        <button
-          onClick={() => setDarkBg((b) => !b)}
-          style={s.bgToggle}
-          title="Toggle background"
-        >
-          {darkBg ? "☀" : "☾"}
-        </button>
+        {onToggleFav && (
+          <button
+            onClick={onToggleFav}
+            style={s.favBtn}
+            aria-label={isFav ? "Remove favourite" : "Add favourite"}
+            title={isFav ? "Remove from favourites" : "Add to favourites"}
+          >
+            <svg
+              viewBox="0 0 12 12"
+              width="14"
+              height="14"
+              fill={isFav ? "var(--danger)" : "none"}
+            >
+              <path
+                d="M6 10.5s-4.5-3-4.5-6a2.5 2.5 0 015 0 2.5 2.5 0 015 0c0 3-4.5 6-4.5 6z"
+                stroke={isFav ? "var(--danger)" : "var(--text3)"}
+                strokeWidth="1.2"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Info */}
       <div style={s.info}>
         <div style={s.titleRow}>
           <span style={s.logoTitle}>{logo.title}</span>
-          {onToggleFav && (
-            <button
-              onClick={onToggleFav}
-              style={{
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                padding: "2px 4px",
-                display: "flex",
-                alignItems: "center",
-                color: isFav ? "var(--danger)" : "var(--text3)",
-              }}
-              aria-label={isFav ? "Remove favourite" : "Add favourite"}
-              title={isFav ? "Remove from favourites" : "Add to favourites"}
-            >
-              <svg
-                viewBox="0 0 12 12"
-                width="14"
-                height="14"
-                fill={isFav ? "var(--danger)" : "none"}
-              >
-                <path
-                  d="M6 10.5s-4.5-3-4.5-6a2.5 2.5 0 015 0 2.5 2.5 0 015 0c0 3-4.5 6-4.5 6z"
-                  stroke={isFav ? "var(--danger)" : "var(--text3)"}
-                  strokeWidth="1.2"
-                />
-              </svg>
-            </button>
-          )}
           {logo.url && (
             <a
               href={logo.url}
@@ -328,9 +310,11 @@ const s: Record<string, React.CSSProperties> = {
     height: 136,
     borderBottom: "1px solid var(--border)",
     flexShrink: 0,
+    backgroundImage:
+      "repeating-linear-gradient(45deg, var(--bg2) 0, var(--bg2) 5px, var(--bg) 5px, var(--bg) 10px)",
   },
   previewImg: { maxWidth: 96, maxHeight: 96, objectFit: "contain" },
-  bgToggle: {
+  favBtn: {
     position: "absolute",
     top: 8,
     right: 8,
@@ -339,11 +323,11 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     width: 24,
     height: 24,
-    cursor: "pointer",
-    fontSize: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    cursor: "pointer",
+    padding: 0,
   },
   info: { padding: "10px 12px 6px", flexShrink: 0 },
   titleRow: { display: "flex", alignItems: "center", gap: 6, marginBottom: 6 },
