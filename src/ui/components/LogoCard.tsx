@@ -45,7 +45,7 @@ export function LogoCard({
   }
 
   const cardStyle: React.CSSProperties = {
-    ...s.card,
+    ...style.card,
     background:
       selected || batchSelected
         ? "var(--surface-hover)"
@@ -55,6 +55,92 @@ export function LogoCard({
     border: `1px solid ${selected ? "var(--accent)" : batchSelected ? "var(--accent)" : "transparent"}`,
     outline: "none",
   };
+
+  function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
+    if (batchMode) {
+      e.preventDefault();
+      return;
+    }
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = "copyMove";
+    e.dataTransfer.dropEffect = "copy";
+
+    e.dataTransfer.setData("text/plain", logo.title);
+    e.dataTransfer.setData("text/uri-list", url);
+    e.dataTransfer.setData(
+      "application/x-svgl-logo",
+      JSON.stringify({
+        id: logo.id,
+        svgUrl: url,
+        name: logo.title,
+        size: 48,
+      }),
+    );
+
+    try {
+      const placeholder = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><title>${logo.title}</title></svg>`;
+      const file = new File([placeholder], `${logo.title}.svg`, {
+        type: "image/svg+xml",
+      });
+      if (e.dataTransfer.items) {
+        e.dataTransfer.items.add(file);
+      } else {
+        // @ts-ignore
+        e.dataTransfer.files = [file];
+      }
+    } catch (_) {
+      /* items API may not exist; ignore */
+    }
+
+    const img = new Image();
+    img.src = url;
+    img.width = 48;
+    img.height = 48;
+    try {
+      e.dataTransfer.setDragImage(img, 24, 24);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function handleDragEnd(e: React.DragEvent<HTMLDivElement>) {
+    if (batchMode) return;
+    // Don't proceed if the item was dropped inside the plugin window.
+    if ((e.view as unknown as { length: number })?.length === 0) return;
+
+    const svgUrl = resolveLogoUrl(logo.route, "light");
+    const payload = {
+      svgUrl,
+      name: logo.title,
+      size: 48,
+    };
+    // Dual approach: official pluginDrop + legacy pluginMessage (for Figma/browser combos that miss one)
+    parent.postMessage(
+      {
+        pluginDrop: {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          dropMetadata: payload,
+        },
+      },
+      "*",
+    );
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "IMPORT_LOGO_DROP",
+          payload: {
+            ...payload,
+            createComponent: false,
+            placement: "cursor",
+            x: e.clientX,
+            y: e.clientY,
+          },
+        },
+      },
+      "*",
+    );
+  }
 
   return (
     <div
@@ -68,12 +154,20 @@ export function LogoCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onKeyDown={(e) => e.key === "Enter" && handleClick()}
+      draggable={!batchMode}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       style={cardStyle}
     >
       {/* Batch checkbox */}
       {batchMode && (
-        <div style={s.checkbox}>
-          <div style={{ ...s.checkInner, ...(batchSelected ? s.checkOn : {}) }}>
+        <div style={style.checkbox}>
+          <div
+            style={{
+              ...style.checkInner,
+              ...(batchSelected ? style.checkOn : {}),
+            }}
+          >
             {batchSelected && (
               <svg viewBox="0 0 10 10" width="8" height="8" fill="none">
                 <path
@@ -90,14 +184,14 @@ export function LogoCard({
       )}
 
       {/* Logo image */}
-      <div style={s.imgWrap}>
+      <div style={style.imgWrap}>
         {imgErr ? (
-          <div style={s.fallback}>{logo.title[0]}</div>
+          <div style={style.fallback}>{logo.title[0]}</div>
         ) : (
           <img
             src={url}
             alt={logo.title}
-            style={s.img}
+            style={style.img}
             loading="lazy"
             onError={() => setImgErr(true)}
           />
@@ -105,7 +199,7 @@ export function LogoCard({
       </div>
 
       {/* Name */}
-      <div style={s.name}>{logo.title}</div>
+      <div style={style.name}>{logo.title}</div>
 
       {/* Quick import button on hover */}
       {hovered && !batchMode && (
@@ -114,7 +208,7 @@ export function LogoCard({
             e.stopPropagation();
             onImport();
           }}
-          style={s.importBtn}
+          style={style.importBtn}
           aria-label={`Import ${logo.title}`}
         >
           Import
@@ -124,7 +218,7 @@ export function LogoCard({
       {/* Favourite button */}
       <button
         onClick={handleFav}
-        style={{ ...s.favBtn, opacity: hovered || fav ? 1 : 0 }}
+        style={{ ...style.favBtn, opacity: hovered || fav ? 1 : 0 }}
         aria-label={fav ? "Remove favourite" : "Add favourite"}
       >
         <svg
@@ -142,12 +236,12 @@ export function LogoCard({
       </button>
 
       {/* Variant dot */}
-      {hasVariants(logo.route) && <div style={s.variantDot} />}
+      {hasVariants(logo.route) && <div style={style.variantDot} />}
     </div>
   );
 }
 
-const s: Record<string, React.CSSProperties> = {
+const style: Record<string, React.CSSProperties> = {
   card: {
     position: "relative",
     display: "flex",
@@ -156,7 +250,7 @@ const s: Record<string, React.CSSProperties> = {
     gap: 5,
     padding: "10px 2px 8px",
     borderRadius: "var(--radius)",
-    cursor: "pointer",
+    cursor: "grab",
     userSelect: "none",
     transition: `all var(--dur) var(--ease)`,
     minWidth: 0,

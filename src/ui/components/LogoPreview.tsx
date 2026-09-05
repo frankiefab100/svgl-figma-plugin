@@ -38,11 +38,85 @@ export function LogoPreview({
   const svgUrl = resolveLogoUrl(logo.route, variant);
   const cats = Array.isArray(logo.category) ? logo.category : [logo.category];
 
+  function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
+    e.dataTransfer.effectAllowed = "copyMove";
+    e.dataTransfer.dropEffect = "copy";
+
+    e.dataTransfer.setData("text/plain", logo.title);
+    e.dataTransfer.setData("text/uri-list", svgUrl);
+    e.dataTransfer.setData(
+      "application/x-svgl-logo",
+      JSON.stringify({
+        id: logo.id,
+        svgUrl,
+        name: logo.title,
+        size,
+      }),
+    );
+
+    try {
+      const placeholder = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><title>${logo.title}</title></svg>`;
+      const file = new File([placeholder], `${logo.title}.svg`, {
+        type: "image/svg+xml",
+      });
+      if (e.dataTransfer.items) {
+        e.dataTransfer.items.add(file);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    const img = new Image();
+    img.src = svgUrl;
+    img.width = size;
+    img.height = size;
+    try {
+      e.dataTransfer.setDragImage(img, size / 2, size / 2);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function handleDragEnd(e: React.DragEvent<HTMLDivElement>) {
+    if ((e.view as unknown as { length: number })?.length === 0) return;
+    const payload = {
+      svgUrl,
+      name: logo.title,
+      size,
+    };
+    // Dual approach: official pluginDrop + legacy pluginMessage
+    parent.postMessage(
+      {
+        pluginDrop: {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          dropMetadata: payload,
+        },
+      },
+      "*",
+    );
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "IMPORT_LOGO_DROP",
+          payload: {
+            ...payload,
+            createComponent: mode === "component",
+            placement,
+            x: e.clientX,
+            y: e.clientY,
+          },
+        },
+      },
+      "*",
+    );
+  }
+
   return (
-    <div style={s.wrap} className="animate-in">
+    <div style={style.wrap} className="animate-in">
       {/* Header */}
-      <div style={s.header}>
-        <button onClick={onBack} style={s.back}>
+      <div style={style.header}>
+        <button onClick={onBack} style={style.back}>
           <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
             <path
               d="M10 3L5 8l5 5"
@@ -57,12 +131,22 @@ export function LogoPreview({
       </div>
 
       {/* Preview canvas */}
-      <div style={s.canvas}>
-        <img src={svgUrl} alt={logo.title} style={s.previewImg} />
+      <div
+        style={style.canvas}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <img
+          src={svgUrl}
+          alt={logo.title}
+          style={style.previewImg}
+          draggable={false}
+        />
         {onToggleFav && (
           <button
             onClick={onToggleFav}
-            style={s.favBtn}
+            style={style.favBtn}
             aria-label={isFav ? "Remove favourite" : "Add favourite"}
             title={isFav ? "Remove from favourites" : "Add to favourites"}
           >
@@ -83,13 +167,13 @@ export function LogoPreview({
       </div>
 
       {/* Info */}
-      <div style={s.info}>
-        <div style={s.titleRow}>
-          <span style={s.logoTitle}>{logo.title}</span>
+      <div style={style.info}>
+        <div style={style.titleRow}>
+          <span style={style.logoTitle}>{logo.title}</span>
           {logo.url && (
             <a
               href={logo.url}
-              style={s.extLink}
+              style={style.extLink}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -105,35 +189,35 @@ export function LogoPreview({
             </a>
           )}
         </div>
-        <div style={s.tags}>
+        <div style={style.tags}>
           {cats.map((c) => (
-            <span key={c} style={s.tag}>
+            <span key={c} style={style.tag}>
               {c}
             </span>
           ))}
         </div>
       </div>
 
-      <div style={s.divider} />
+      <div style={style.divider} />
 
       {/* Variants */}
       {supportsVariants && (
         <Section label="Variants">
-          <div style={s.row}>
+          <div style={style.row}>
             {(["light", "dark"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setVariant(v)}
                 style={{
-                  ...s.variantBtn,
-                  ...(variant === v ? s.variantBtnOn : {}),
+                  ...style.variantBtn,
+                  ...(variant === v ? style.variantBtnOn : {}),
                 }}
               >
                 <img
                   src={resolveLogoUrl(logo.route, v)}
                   alt={v}
                   style={{
-                    ...s.variantThumb,
+                    ...style.variantThumb,
                     background: v === "dark" ? "#111" : "#f5f5f5",
                   }}
                 />
@@ -146,28 +230,34 @@ export function LogoPreview({
 
       {/* Size */}
       <Section label="Size">
-        <div style={s.row}>
+        <div style={style.row}>
           {SIZES.map((n) => (
             <button
               key={n}
               onClick={() => setSize(n)}
-              style={{ ...s.sizeBtn, ...(size === n ? s.sizeBtnOn : {}) }}
+              style={{
+                ...style.sizeBtn,
+                ...(size === n ? style.sizeBtnOn : {}),
+              }}
             >
               {n}
             </button>
           ))}
-          <span style={s.unit}>px</span>
+          <span style={style.unit}>px</span>
         </div>
       </Section>
 
       {/* Import as */}
       <Section label="Import as">
-        <div style={s.row}>
+        <div style={style.row}>
           {(["svg", "component"] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
-              style={{ ...s.modeBtn, ...(mode === m ? s.modeBtnOn : {}) }}
+              style={{
+                ...style.modeBtn,
+                ...(mode === m ? style.modeBtnOn : {}),
+              }}
             >
               {m === "svg" ? "SVG (editable)" : "Component"}
             </button>
@@ -177,12 +267,15 @@ export function LogoPreview({
 
       {/* Placement */}
       <Section label="Placement">
-        <div style={s.row}>
+        <div style={style.row}>
           {(["cursor", "new-page"] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPlacement(p)}
-              style={{ ...s.modeBtn, ...(placement === p ? s.modeBtnOn : {}) }}
+              style={{
+                ...style.modeBtn,
+                ...(placement === p ? style.modeBtnOn : {}),
+              }}
             >
               {p === "cursor" ? "At cursor" : "New page"}
             </button>
@@ -190,7 +283,7 @@ export function LogoPreview({
         </div>
       </Section>
 
-      <div style={s.divider} />
+      <div style={style.divider} />
 
       {/* Import button */}
       <button
@@ -203,7 +296,7 @@ export function LogoPreview({
             placement,
           })
         }
-        style={s.importBtn}
+        style={style.importBtn}
       >
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
           <path
@@ -218,7 +311,7 @@ export function LogoPreview({
       </button>
 
       {/* Meta */}
-      <div style={s.meta}>
+      <div style={style.meta}>
         <MetaRow k="Source" v="svgl.app" />
         <MetaRow k="Category" v={cats.join(", ")} />
         <MetaRow k="License" v="Check source before commercial use" muted />
@@ -277,7 +370,7 @@ function MetaRow({ k, v, muted }: { k: string; v: string; muted?: boolean }) {
   );
 }
 
-const s: Record<string, React.CSSProperties> = {
+const style: Record<string, React.CSSProperties> = {
   wrap: {
     display: "flex",
     flexDirection: "column",
@@ -312,6 +405,7 @@ const s: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     backgroundImage:
       "repeating-linear-gradient(45deg, var(--bg2) 0, var(--bg2) 5px, var(--bg) 5px, var(--bg) 10px)",
+    cursor: "grab",
   },
   previewImg: { maxWidth: 96, maxHeight: 96, objectFit: "contain" },
   favBtn: {

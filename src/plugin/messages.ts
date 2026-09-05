@@ -14,6 +14,7 @@ export type UIToPluginMessage =
       placement: "cursor" | "new-page";
     };
   }
+  | { type: "IMPORT_LOGO_DROP"; payload: { svgUrl: string; name: string; size: number; createComponent: boolean; placement: "cursor" | "new-page"; x?: number; y?: number; }; }
   | {
     type: "IMPORT_LOGOS_BATCH";
     payload: {

@@ -1,5 +1,6 @@
 import React from "react";
 import type { SVGLogo } from "../../types/svgl";
+import { resolveLogoUrl, sendToPlugin } from "../lib/api";
 import { LogoCard } from "./LogoCard";
 import { LoadingGrid } from "./LoadingGrid";
 
@@ -32,8 +33,39 @@ export function LogoGrid({
 
   const favSet = favIds instanceof Set ? favIds : new Set(favIds || []);
 
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData("text/plain");
+    if (!data) return;
+    try {
+      const { id } = JSON.parse(data);
+      const logo = logos.find((l) => l.id === id);
+      if (!logo) return;
+      const payload = {
+        svgUrl: resolveLogoUrl(logo.route, "light"),
+        name: logo.title,
+        size: 48,
+        createComponent: false,
+        placement: "cursor",
+        x: e.clientX,
+        y: e.clientY,
+      };
+      sendToPlugin({ type: "IMPORT_LOGO_DROP", payload });
+    } catch {}
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
   return (
-    <div style={s.grid} role="list">
+    <div
+      style={style.grid}
+      role="list"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       {logos.map((logo) => (
         <div key={logo.id} role="listitem">
           <LogoCard
@@ -53,7 +85,7 @@ export function LogoGrid({
   );
 }
 
-const s: Record<string, React.CSSProperties> = {
+const style: Record<string, React.CSSProperties> = {
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
