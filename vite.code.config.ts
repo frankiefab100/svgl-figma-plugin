@@ -1,9 +1,6 @@
 import { defineConfig } from "vite";
 import path from "path";
 
-// Builds ONLY src/plugin/code.ts → dist/code.js
-// No React, no HTML, plain JS bundle for the Figma main thread.
-
 export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist"),

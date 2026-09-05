@@ -8,12 +8,12 @@ interface Props {
 }
 
 export function SettingsPanel({ onClose }: Props) {
-  const [cfg, setCfg] = useState<ImportSettings>(getSettings);
+  const [userSettings, setUserSettings] = useState<ImportSettings>(getSettings);
   const [cleared, setCleared] = useState(false);
 
   function set<K extends keyof ImportSettings>(k: K, v: ImportSettings[K]) {
-    const next = { ...cfg, [k]: v };
-    setCfg(next);
+    const next = { ...userSettings, [k]: v };
+    setUserSettings(next);
     saveSettings(next);
     sendToPlugin({ type: "SET_SETTINGS", settings: next });
   }
@@ -51,7 +51,7 @@ export function SettingsPanel({ onClose }: Props) {
           <div style={s.row}>
             <input
               type="number"
-              value={cfg.defaultSize}
+              value={userSettings.defaultSize}
               min={16}
               max={256}
               onChange={(e) => set("defaultSize", +e.target.value)}
@@ -68,13 +68,13 @@ export function SettingsPanel({ onClose }: Props) {
           <Radio
             name="mode"
             label="Import as SVG (single layer)"
-            checked={cfg.importMode === "svg"}
+            checked={userSettings.importMode === "svg"}
             onChange={() => set("importMode", "svg")}
           />
           <Radio
             name="mode"
             label="Import as Component"
-            checked={cfg.importMode === "component"}
+            checked={userSettings.importMode === "component"}
             onChange={() => set("importMode", "component")}
           />
         </Group>
@@ -86,13 +86,13 @@ export function SettingsPanel({ onClose }: Props) {
           <Radio
             name="placement"
             label="At cursor"
-            checked={cfg.placement === "cursor"}
+            checked={userSettings.placement === "cursor"}
             onChange={() => set("placement", "cursor")}
           />
           <Radio
             name="placement"
             label="On new page"
-            checked={cfg.placement === "new-page"}
+            checked={userSettings.placement === "new-page"}
             onChange={() => set("placement", "new-page")}
           />
         </Group>
@@ -104,7 +104,7 @@ export function SettingsPanel({ onClose }: Props) {
           <div style={s.cacheRow}>
             <span style={s.cacheLabel}>Cache logos for faster search</span>
             <ToggleSwitch
-              on={cfg.cacheEnabled}
+              on={userSettings.cacheEnabled}
               onChange={(v) => set("cacheEnabled", v)}
             />
           </div>
@@ -121,7 +121,7 @@ export function SettingsPanel({ onClose }: Props) {
         {/* About */}
         <Group label="About">
           <div style={s.aboutRow}>
-            <span style={s.aboutName}>SVGL</span>
+            <span style={s.aboutName}>SVGL Logos for Figma</span>
             <span style={s.version}>v1.0.0</span>
           </div>
           <p style={s.aboutText}>
@@ -136,14 +136,17 @@ export function SettingsPanel({ onClose }: Props) {
             </a>
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <a href="https://github.com/pheralb/svgl" style={s.link}>
+            <a
+              href="https://github.com/frankiefab100/svgl-figma-plugin"
+              style={s.link}
+            >
               View on GitHub
             </a>
-            <a href="https://github.com/pheralb/svgl/issues" style={s.link}>
+            <a
+              href="https://github.com/frankiefab100/svgl-figma-plugin/issues"
+              style={s.link}
+            >
               Report an issue
-            </a>
-            <a href="https://svgl.app" style={s.link}>
-              Suggest a logo
             </a>
           </div>
         </Group>

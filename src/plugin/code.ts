@@ -42,21 +42,21 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
       try {
         await figma.clientStorage.setAsync("svgl_favorites", msg.favorites);
       } catch (e) {
-        console.warn("[SVGL] Failed to save favorites:", e);
+        console.warn("Failed to save favorites:", e);
       }
       break;
     case "SET_RECENT":
       try {
         await figma.clientStorage.setAsync("svgl_recent", msg.recent);
       } catch (e) {
-        console.warn("[SVGL] Failed to save recent:", e);
+        console.warn("Failed to save recent:", e);
       }
       break;
     case "SET_SETTINGS":
       try {
         await figma.clientStorage.setAsync("svgl_settings", msg.settings);
       } catch (e) {
-        console.warn("[SVGL] Failed to save settings:", e);
+        console.warn("Failed to save settings:", e);
       }
       break;
     case "CLOSE":
@@ -141,7 +141,7 @@ figma.on('drop', (event: DropEvent) => {
       } catch (err) {
         const detail = errMsg(err);
         figma.notify(`Failed to import SVG`, { error: true });
-        console.error("[SVGL] file drop:", detail);
+        console.error("file drop:", detail);
       }
     });
     return false;
@@ -167,7 +167,7 @@ async function loadStorage() {
       },
     });
   } catch (err) {
-    console.warn("[SVGL] Failed to load clientStorage:", err);
+    console.warn("Failed to load clientStorage:", err);
   }
 }
 
@@ -260,7 +260,7 @@ async function fetchSVGText(url: string): Promise<string> {
       if (text && text.includes("<svg")) return sanitizeSVG(text);
     }
   } catch (err) {
-    console.warn(`[SVGL] jsDelivr CDN fetch failed for ${cdnUrl}: ${errMsg(err)}`);
+    console.warn(`jsDelivr CDN fetch failed for ${cdnUrl}: ${errMsg(err)}`);
   }
 
   try {
@@ -271,7 +271,7 @@ async function fetchSVGText(url: string): Promise<string> {
       if (text && text.includes("<svg")) return sanitizeSVG(text);
     }
   } catch (err) {
-    console.warn(`[SVGL] GitHub Raw fetch failed for ${url}: ${errMsg(err)}`);
+    console.warn(`GitHub Raw fetch failed for ${url}: ${errMsg(err)}`);
   }
 
   try {
@@ -372,7 +372,7 @@ async function importSingle(payload: {
     const detail = errMsg(err);
     figma.ui.postMessage({ type: "IMPORT_ERROR", name, error: detail });
     figma.notify(`Failed: ${name}`, { error: true });
-    console.error(`[SVGL] "${name}": ${detail}`);
+    console.error(`"${name}": ${detail}`);
   }
 }
 
@@ -497,7 +497,7 @@ async function importByCoord(payload: {
     const detail = errMsg(err);
     figma.ui.postMessage({ type: "IMPORT_ERROR", name, error: detail });
     figma.notify(`Failed: ${name}`, { error: true });
-    console.error(`[SVGL] dnd "${name}": ${detail}`);
+    console.error(`dnd "${name}": ${detail}`);
   }
 }
 
@@ -520,7 +520,7 @@ async function importBatch(payload: {
       nodes.push(node);
     } catch (err) {
       failed.push(logo.name);
-      console.error(`[SVGL] batch "${logo.name}": ${errMsg(err)}`);
+      console.error(`batch "${logo.name}": ${errMsg(err)}`);
     }
   }
 

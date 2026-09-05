@@ -54,14 +54,14 @@ export default function App() {
   const [batchMode, setBatchMode] = useState(false);
   const [importing, setImporting] = useState(false);
   // Global theme settings
-  const [cfg, setCfg] = useState<ImportSettings>(() => ({
+  const [themeSettings, setThemeSettings] = useState<ImportSettings>(() => ({
     ...DEFAULT_SETTINGS,
     theme: "light",
   }));
   // Apply theme to document root
   useEffect(() => {
-    document.documentElement.dataset.theme = cfg.theme ?? "light";
-  }, [cfg.theme]);
+    document.documentElement.dataset.theme = themeSettings.theme ?? "light";
+  }, [themeSettings.theme]);
 
   /* listen for replies from code.ts */
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function App() {
             if (msg.payload.settings) {
               const newSettings = msg.payload.settings as ImportSettings;
               updateSettingsCache(newSettings);
-              setCfg((prev) => ({ ...prev, ...newSettings }));
+              setThemeSettings((prev) => ({ ...prev, ...newSettings }));
             }
           }
           break;
@@ -228,7 +228,7 @@ export default function App() {
   /* sub-views */
   if (view === "preview" && preview)
     return (
-      <div style={lay.root}>
+      <div style={layout.root}>
         <LogoPreview
           logo={preview}
           isFav={favIds.includes(preview.id)}
@@ -242,7 +242,7 @@ export default function App() {
 
   if (view === "batch")
     return (
-      <div style={lay.root}>
+      <div style={layout.root}>
         <BatchImport
           selected={batchMap}
           onImport={importBatch}
@@ -261,7 +261,7 @@ export default function App() {
 
   if (view === "settings")
     return (
-      <div style={lay.root}>
+      <div style={layout.root}>
         <SettingsPanel onClose={() => setView("main")} />
         <ToastContainer />
       </div>
@@ -269,11 +269,11 @@ export default function App() {
 
   /* main view */
   return (
-    <div style={lay.root}>
+    <div style={layout.root}>
       {/* Header */}
-      <div style={lay.header}>
-        <div style={lay.brand}>
-          <div style={lay.logoBox}>
+      <div style={layout.header}>
+        <div style={layout.brand}>
+          <div style={layout.logoBox}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
               <rect
                 x="2"
@@ -313,12 +313,12 @@ export default function App() {
             </svg>
           </div>
           <div>
-            <div style={lay.brandName}>SVGL</div>
-            <div style={lay.brandSub}>Open source logos.</div>
+            <div style={layout.brandName}>SVGL Logos for Figma</div>
+            <div style={layout.brandSub}>Open source vector logos</div>
           </div>
         </div>
 
-        <div style={lay.actions}>
+        <div style={layout.actions}>
           {/* Batch toggle */}
           <IconBtn
             active={batchMode}
@@ -357,17 +357,18 @@ export default function App() {
 
           {/* Theme toggle */}
           <IconBtn
-            title={cfg?.theme === "dark" ? "Light mode" : "Dark mode"}
+            title={themeSettings?.theme === "dark" ? "Light mode" : "Dark mode"}
             onClick={() => {
-              const newTheme = cfg?.theme === "dark" ? "light" : "dark";
-              setCfg((prev) => ({ ...prev, theme: newTheme }));
+              const newTheme =
+                themeSettings?.theme === "dark" ? "light" : "dark";
+              setThemeSettings((prev) => ({ ...prev, theme: newTheme }));
               sendToPlugin({
                 type: "SET_SETTINGS",
                 settings: { theme: newTheme },
               });
             }}
           >
-            {cfg?.theme === "dark" ? (
+            {themeSettings?.theme === "dark" ? (
               <svg
                 width="24"
                 height="24"
@@ -409,10 +410,10 @@ export default function App() {
 
       {/* Batch banner */}
       {batchMode && (
-        <div style={lay.batchBanner}>
+        <div style={layout.batchBanner}>
           <span>Select logos to batch import</span>
           {batchMap.size > 0 && (
-            <button onClick={() => setView("batch")} style={lay.batchGo}>
+            <button onClick={() => setView("batch")} style={layout.batchGo}>
               View {batchMap.size} →
             </button>
           )}
@@ -421,7 +422,7 @@ export default function App() {
               setBatchMode(false);
               setBatchMap(new Map());
             }}
-            style={lay.batchCancel}
+            style={layout.batchCancel}
           >
             Cancel
           </button>
@@ -429,7 +430,7 @@ export default function App() {
       )}
 
       {/* Search */}
-      <div style={lay.padX}>
+      <div style={layout.padX}>
         <SearchBar
           value={query}
           onChange={(v) => {
@@ -441,7 +442,7 @@ export default function App() {
       </div>
 
       {/* Category tabs */}
-      <div style={lay.padX}>
+      <div style={layout.padX}>
         <CategoryTabs
           categories={categories}
           active={activeCategory}
@@ -454,7 +455,7 @@ export default function App() {
       </div>
 
       {/* Filter row */}
-      <div style={lay.filterRow}>
+      <div style={layout.filterRow}>
         {(["all", "recent", "favorites"] as Filter[]).map((f) => (
           <button
             key={f}
@@ -465,7 +466,10 @@ export default function App() {
                 setActiveCategory("All");
               }
             }}
-            style={{ ...lay.filterBtn, ...(filter === f ? lay.filterOn : {}) }}
+            style={{
+              ...layout.filterBtn,
+              ...(filter === f ? layout.filterOn : {}),
+            }}
           >
             {f === "all"
               ? "All Logos"
@@ -483,7 +487,7 @@ export default function App() {
         {filter === "favorites" && (
           <button
             onClick={() => sendToPlugin({ type: "GET_STORAGE" })}
-            style={lay.refreshBtn}
+            style={layout.refreshBtn}
             title="Sync favorites"
           >
             ↻
@@ -491,7 +495,7 @@ export default function App() {
         )}
 
         {filter === "recent" && recent.length > 0 && (
-          <button onClick={handleClearRecent} style={lay.clearBtn}>
+          <button onClick={handleClearRecent} style={layout.clearBtn}>
             Clear
           </button>
         )}
@@ -499,11 +503,11 @@ export default function App() {
 
       {/* Count */}
       {!isLoading && !error && filter === "all" && logos.length > 0 && (
-        <div style={lay.count}>{logos.length.toLocaleString()} logos</div>
+        <div style={layout.count}>{logos.length.toLocaleString()} logos</div>
       )}
 
       {/* Logo grid / states */}
-      <div style={lay.scroll}>
+      <div style={layout.scroll}>
         {error ? (
           <EmptyState type="network-error" onRetry={retry} />
         ) : filter === "favorites" && displayed.length === 0 ? (
@@ -532,14 +536,21 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <div style={lay.footer}>
+      <div style={layout.footer}>
         <span>
-          <a href="https://svgl.app" style={lay.fLink}>
-            View source
+          Having trouble?{" "}
+          <a
+            href="https://github.com/frankiefab100/svgl-figma-plugin/issues"
+            style={layout.fLink}
+          >
+            Report issue
           </a>
           {" · "}
-          <a href="https://github.com/pheralb/svgl/issues" style={lay.fLink}>
-            Report issue
+          <a
+            href="https://github.com/frankiefab100/svgl-figma-plugin"
+            style={layout.fLink}
+          >
+            View source
           </a>
         </span>
         <span>v1.0.0</span>
@@ -547,8 +558,8 @@ export default function App() {
 
       {/* Importing overlay */}
       {importing && (
-        <div style={lay.overlay}>
-          <div style={lay.spinner} />
+        <div style={layout.overlay}>
+          <div style={layout.spinner} />
         </div>
       )}
 
@@ -641,7 +652,7 @@ function SettingsIcon() {
 }
 
 /* layout styles */
-const lay: Record<string, React.CSSProperties> = {
+const layout: Record<string, React.CSSProperties> = {
   root: {
     display: "flex",
     flexDirection: "column",

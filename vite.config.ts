@@ -3,19 +3,13 @@ import react from "@vitejs/plugin-react";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import path from "path";
 
-// Two separate build configs are needed:
-//   1. UI build  → dist/index.html  (React app, fully inlined via singlefile)
-//   2. Code build → dist/code.js    (Figma main thread, plain JS)
-//
-// Run: vite build          → builds UI
-//      vite build --config vite.code.config.ts → builds code.ts
-//
-// Both are triggered by the "build" npm script via a shell command.
+//   1. UI build  → dist/index.html  (React app, fully inlined via singlefile) // npm run build
+//   2. Code build → dist/code.js    (Figma main thread, plain JS) // npm run build --config vite.code.config.ts
 
 export default defineConfig({
   plugins: [
     react(),
-    viteSingleFile(), // inlines ALL js+css into the html — Figma-safe
+    viteSingleFile(), // inlines ALL js+css into the html (Figma-safe)
   ],
   root: path.resolve(__dirname, "src/ui"),
   build: {

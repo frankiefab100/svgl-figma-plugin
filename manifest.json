@@ -1,6 +1,6 @@
 {
-  "name": "SVGL — Logo Library",
-  "id": "svgl-logo-library",
+  "name": "SVGL Logos for Figma",
+  "id": "svgl-logos-for-figma",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/index.html",

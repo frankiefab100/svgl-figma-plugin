@@ -28,11 +28,11 @@ export function LogoPreview({
   isFav,
   onToggleFav,
 }: Props) {
-  const cfg = getSettings();
+  const userSettings = getSettings();
   const [variant, setVariant] = useState<"light" | "dark">("light");
-  const [size, setSize] = useState(cfg.defaultSize);
-  const [mode, setMode] = useState(cfg.importMode);
-  const [placement, setPlacement] = useState(cfg.placement);
+  const [size, setSize] = useState(userSettings.defaultSize);
+  const [mode, setMode] = useState(userSettings.importMode);
+  const [placement, setPlacement] = useState(userSettings.placement);
 
   const supportsVariants = hasVariants(logo.route);
   const svgUrl = resolveLogoUrl(logo.route, variant);

@@ -81,9 +81,9 @@ export function CategoryTabs({ categories, active, onChange }: Props) {
   };
 
   return (
-    <div style={s.container}>
+    <div style={style.container}>
       {canScrollLeft && (
-        <div style={s.edgeLeft}>
+        <div style={style.edgeLeft}>
           <button
             type="button"
             className="category-nav-btn"
@@ -110,7 +110,7 @@ export function CategoryTabs({ categories, active, onChange }: Props) {
       <div
         ref={scrollRef}
         className="no-scrollbar"
-        style={s.wrap}
+        style={style.wrap}
         role="tablist"
       >
         {display.map((tab) => {
@@ -122,7 +122,7 @@ export function CategoryTabs({ categories, active, onChange }: Props) {
               role="tab"
               aria-selected={isSelected}
               onClick={() => onChange(tab)}
-              style={{ ...s.tab, ...(isSelected ? s.active : {}) }}
+              style={{ ...style.tab, ...(isSelected ? style.active : {}) }}
             >
               {tab}
             </button>
@@ -131,7 +131,7 @@ export function CategoryTabs({ categories, active, onChange }: Props) {
       </div>
 
       {canScrollRight && (
-        <div style={s.edgeRight}>
+        <div style={style.edgeRight}>
           <button
             type="button"
             className="category-nav-btn"
@@ -158,7 +158,7 @@ export function CategoryTabs({ categories, active, onChange }: Props) {
   );
 }
 
-const s: Record<string, React.CSSProperties> = {
+const style: Record<string, React.CSSProperties> = {
   container: {
     position: "relative",
     display: "flex",
