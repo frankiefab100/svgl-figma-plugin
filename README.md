@@ -24,7 +24,8 @@
     <img src="https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="Figma Plugin">
   </p>
 
-  <img src="/images/og-image.jpg" alt="SVGL Logos for Figma Banner" width="600"/>
+  <img src="./src/assets/banner.png" alt="SVGL Logos for Figma Banner" width="600"/>
+  <!-- ![Plugin Banner](./src/assets/banner.png) -->
 </div>
 
 ## ⚡ Features

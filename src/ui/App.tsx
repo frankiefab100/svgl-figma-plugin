@@ -21,6 +21,7 @@ import { BatchImport } from "./components/BatchImport";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { EmptyState } from "./components/EmptyState";
 import { ToastContainer, showToast } from "./components/Toast";
+import logo from "./assets/logo-128.svg";
 
 type View = "main" | "preview" | "batch" | "settings";
 type Filter = "all" | "recent" | "favorites";
@@ -273,45 +274,7 @@ export default function App() {
       {/* Header */}
       <div style={layout.header}>
         <div style={layout.brand}>
-          <div style={layout.logoBox}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
-              <rect
-                x="2"
-                y="2"
-                width="9"
-                height="9"
-                rx="2"
-                fill="var(--accent)"
-              />
-              <rect
-                x="13"
-                y="2"
-                width="9"
-                height="9"
-                rx="2"
-                fill="var(--accent)"
-                opacity="0.6"
-              />
-              <rect
-                x="2"
-                y="13"
-                width="9"
-                height="9"
-                rx="2"
-                fill="var(--accent)"
-                opacity="0.6"
-              />
-              <rect
-                x="13"
-                y="13"
-                width="9"
-                height="9"
-                rx="2"
-                fill="var(--accent)"
-                opacity="0.3"
-              />
-            </svg>
-          </div>
+          <img src={logo} alt="Plugin Logo" width="28" height="28" />
           <div>
             <div style={layout.brandName}>SVGL Logos for Figma</div>
             <div style={layout.brandSub}>Open source vector logos</div>
