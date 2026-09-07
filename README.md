@@ -23,9 +23,8 @@
     <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
     <img src="https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="Figma Plugin">
   </p>
-
-  <img src="./src/assets/banner.png" alt="SVGL Logos for Figma Banner" width="600"/>
-  <!-- ![Plugin Banner](./src/assets/banner.png) -->
+  
+  <img width="1920" height="960" alt="SVGL Logos for Figma Banner" src="https://github.com/user-attachments/assets/61143639-6d50-4f6e-8741-546f68c62fff" />
 </div>
 
 ## ⚡ Features
