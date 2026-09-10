@@ -276,7 +276,7 @@ export default function App() {
         <div style={layout.brand}>
           <img src={logo} alt="Plugin Logo" width="28" height="28" />
           <div>
-            <div style={layout.brandName}>SVGL Logos for Figma</div>
+            <div style={layout.brandName}>SVGL Logos</div>
             <div style={layout.brandSub}>Open source vector logos</div>
           </div>
         </div>

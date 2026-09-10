@@ -78,6 +78,6 @@ export async function completeLogoDrag(
     },
   };
 
-  console.log("[ui] pluginDrop sent items", dropData.pluginDrop);
+  // console.log("[ui] pluginDrop sent items", dropData.pluginDrop);
   parent.postMessage(dropData, "*");
 }

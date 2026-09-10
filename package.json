@@ -23,7 +23,7 @@
   "homepage": "https://github.com/frankiefab100/svgl-figma-plugin#readme",
   "scripts": {
     "build:ui": "vite build --config vite.config.ts",
-    "build:code": "vite build --config vite.code.config.ts",
+    "build:code": "vite build --config vite.plugin.config.ts",
     "build": "npm run build:ui && npm run build:code",
     "dev": "npm run build -- --watch"
   },

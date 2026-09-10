@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import type { Category } from "../../types/svgl";
 
-const PINNED = ["All", "Tech", "Social", "Brands", "Countries"];
+const PINNED = ["All", "Design", "Language", "AI", "Payment"];
 
 interface Props {
   categories: Category[];
