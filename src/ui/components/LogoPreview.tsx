@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { SVGLogo } from "../../types/svgl";
 import { resolveLogoUrl, hasVariants } from "../lib/api";
 import { getSettings } from "../lib/storage";
+import { prepareLogoDrag, completeLogoDrag } from "../lib/logoDrag";
 
 const SIZES = [24, 32, 48, 64, 128];
 
@@ -39,77 +40,18 @@ export function LogoPreview({
   const cats = Array.isArray(logo.category) ? logo.category : [logo.category];
 
   function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
-    e.dataTransfer.effectAllowed = "copyMove";
-    e.dataTransfer.dropEffect = "copy";
-
-    e.dataTransfer.setData("text/plain", logo.title);
-    e.dataTransfer.setData("text/uri-list", svgUrl);
-    e.dataTransfer.setData(
-      "application/x-svgl-logo",
-      JSON.stringify({
-        id: logo.id,
-        svgUrl,
-        name: logo.title,
-        size,
-      }),
-    );
-
-    try {
-      const placeholder = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><title>${logo.title}</title></svg>`;
-      const file = new File([placeholder], `${logo.title}.svg`, {
-        type: "image/svg+xml",
-      });
-      if (e.dataTransfer.items) {
-        e.dataTransfer.items.add(file);
-      }
-    } catch (_) {
-      /* ignore */
-    }
-
-    const img = new Image();
-    img.src = svgUrl;
-    img.width = size;
-    img.height = size;
-    try {
-      e.dataTransfer.setDragImage(img, size / 2, size / 2);
-    } catch (_) {
-      /* ignore */
-    }
+    prepareLogoDrag(e, { id: logo.id, svgUrl, name: logo.title, size });
   }
 
   function handleDragEnd(e: React.DragEvent<HTMLDivElement>) {
-    if ((e.view as unknown as { length: number })?.length === 0) return;
-    const payload = {
+    completeLogoDrag(e, {
+      id: logo.id,
       svgUrl,
       name: logo.title,
       size,
-    };
-    // Dual approach: official pluginDrop + legacy pluginMessage
-    parent.postMessage(
-      {
-        pluginDrop: {
-          clientX: e.clientX,
-          clientY: e.clientY,
-          dropMetadata: payload,
-        },
-      },
-      "*",
-    );
-    parent.postMessage(
-      {
-        pluginMessage: {
-          type: "IMPORT_LOGO_DROP",
-          payload: {
-            ...payload,
-            createComponent: mode === "component",
-            placement,
-            x: e.clientX,
-            y: e.clientY,
-          },
-        },
-      },
-      "*",
-    );
+      createComponent: mode === "component",
+      placement,
+    });
   }
 
   return (

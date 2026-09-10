@@ -1,6 +1,6 @@
 /// <reference types="@figma/plugin-typings" />
 
-import { API, errMsg, getSVGDimensions, placeNode, sanitizeSVG, toCdnUrl, toRawGithubUrl } from "../ui/lib/api";
+import { API, errMsg, toCdnUrl, toRawGithubUrl, sanitizeSVG, getSVGDimensions } from "../ui/lib/api";
 import type { UIToPluginMessage } from "./messages";
 
 figma.showUI(__html__, {
@@ -10,7 +10,6 @@ figma.showUI(__html__, {
   title: "SVGL Logos for Figma",
 });
 
-// Message handler
 figma.ui.onmessage = async (msg: UIToPluginMessage) => {
   switch (msg.type) {
     case "FETCH_LOGOS":
@@ -27,9 +26,6 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
       break;
     case "IMPORT_LOGO":
       await importSingle(msg.payload);
-      break;
-    case "IMPORT_LOGO_DROP":
-      await importByCoord(msg.payload);
       break;
     case "IMPORT_LOGOS_BATCH":
       await importBatch(msg.payload);
@@ -64,91 +60,8 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
   }
 };
 
-// Drop handler (drag from plugin UI → Figma canvas)
-// Accepts drops via three paths, ordered by reliability:
-//   1. dropMetadata.svgUrl via official pluginDrop bridge  → create via CDN fetch
-//   2. items[].data  ('image/svg+xml') via hosted UI bridge → createNodeFromSvg directly
-//   3. files[0]      ('image/svg+xml') via icon-drag-and-drop → getTextAsync + createNodeFromSvg
-// If any path succeeds, we finalize placement at absoluteX/absoluteY.
-figma.on('drop', (event: DropEvent) => {
-  const { dropMetadata, absoluteX, absoluteY, items, files } = event;
+figma.on("drop", handleLogoDrop);
 
-  //  Path 1: structured drop metadata (main approach) 
-  if (dropMetadata && typeof dropMetadata === 'object') {
-    const meta = dropMetadata as { svgUrl?: string; name?: string; size?: number };
-    if (meta.svgUrl && meta.name) {
-      const size = meta.size || 48;
-      createLogoNode(meta.svgUrl, meta.name, size)
-        .then((node) => {
-          node.x = absoluteX - node.width / 2;
-          node.y = absoluteY - node.height / 2;
-          figma.currentPage.appendChild(node);
-          figma.currentPage.selection = [node];
-          figma.viewport.scrollAndZoomIntoView([node]);
-          figma.ui.postMessage({ type: "IMPORT_SUCCESS", name: meta.name! });
-          figma.notify(`✓ ${meta.name} imported`);
-        })
-        .catch((err) => {
-          const detail = errMsg(err);
-          figma.ui.postMessage({ type: "IMPORT_ERROR", name: meta.name!, error: detail });
-          figma.notify(`Failed: ${meta.name}`, { error: true });
-        });
-      return false;
-    }
-  }
-
-  //  Path 2: DataTransferItem SVG string (hosted-iframe bridge) 
-  if (items && items.length > 0) {
-    for (const it of items) {
-      if (it.type === 'image/svg+xml' && typeof it.data === 'string' && it.data.includes('<svg')) {
-        try {
-          const node = figma.createNodeFromSvg(it.data);
-          node.name = (dropMetadata as any)?.name || "SVG Logo";
-          const w = node.width || 48;
-          const h = node.height || 48;
-          const scale = 48 / Math.max(w, h);
-          if (scale < 1) node.resize(Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
-          node.x = absoluteX - node.width / 2;
-          node.y = absoluteY - node.height / 2;
-          figma.currentPage.appendChild(node);
-          figma.currentPage.selection = [node];
-          figma.viewport.scrollAndZoomIntoView([node]);
-          figma.notify(`✓ ${node.name} imported`);
-          return false;
-        } catch (_) { /* continue to next path */ }
-      }
-    }
-  }
-
-  //  Path 3: File SVG (icon-drag-and-drop approach) 
-  if (files && files.length > 0 && files[0].type === 'image/svg+xml') {
-    files[0].getTextAsync().then((text) => {
-      if (!text || !text.includes("<svg")) return;
-      try {
-        const node = figma.createNodeFromSvg(text);
-        node.name = (dropMetadata as any)?.name || "SVG Logo";
-        const w = node.width || 48;
-        const h = node.height || 48;
-        const scale = 48 / Math.max(w, h);
-        if (scale < 1) node.resize(Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
-        node.x = absoluteX - node.width / 2;
-        node.y = absoluteY - node.height / 2;
-        figma.currentPage.appendChild(node);
-        figma.currentPage.selection = [node];
-        figma.viewport.scrollAndZoomIntoView([node]);
-        figma.notify(`✓ ${node.name} imported`);
-      } catch (err) {
-        const detail = errMsg(err);
-        figma.notify(`Failed to import SVG`, { error: true });
-        console.error("file drop:", detail);
-      }
-    });
-    return false;
-  }
-  return false;
-});
-
-// Storage
 async function loadStorage() {
   try {
     const [recent, favorites, settings] = await Promise.all([
@@ -171,7 +84,6 @@ async function loadStorage() {
 
 loadStorage();
 
-// Proxy JSON → UI
 async function proxyJSON(url: string, successType: "LOGOS_DATA" | "CATEGORIES_DATA") {
   try {
     const res = await fetch(url);
@@ -190,44 +102,31 @@ async function proxyJSON(url: string, successType: "LOGOS_DATA" | "CATEGORIES_DA
   }
 }
 
-// Fetch SVG with fallbacks
-async function fetchSVGText(url: string): Promise<string> {
-  const cdnUrl = toCdnUrl(url);
-
-  try {
-    const res = await fetch(cdnUrl);
-    if (res.ok) {
-      const text = await res.text();
-      if (text && text.includes("<svg")) return sanitizeSVG(text);
-    }
-  } catch (err) {
-    console.warn(`jsDelivr CDN fetch failed for ${cdnUrl}: ${errMsg(err)}`);
-  }
-
-  try {
-    const rawUrl = toRawGithubUrl(url);
-    const res = await fetch(rawUrl);
-    if (res.ok) {
-      const text = await res.text();
-      if (text && text.includes("<svg")) return sanitizeSVG(text);
-    }
-  } catch (err) {
-    console.warn(`GitHub Raw fetch failed for ${url}: ${errMsg(err)}`);
-  }
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    if (!text || !text.includes("<svg")) throw new Error("Invalid SVG content");
-    return sanitizeSVG(text);
-  } catch (err) {
-    throw new Error(`Failed to fetch SVG: ${errMsg(err)}`);
-  }
+interface DropMeta {
+  name?: string;
+  size?: number;
+  createComponent?: boolean;
+  placement?: "cursor" | "new-page";
 }
 
-// Node creation
-async function tryCreateNodeFromSvg(svgText: string, name: string, size: number): Promise<FrameNode> {
+async function fetchSVGText(url: string): Promise<string> {
+  const candidates = [toCdnUrl(url), toRawGithubUrl(url), url];
+
+  for (const candidate of candidates) {
+    try {
+      const res = await fetch(candidate);
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (text && text.includes("<svg")) return sanitizeSVG(text);
+    } catch {
+      /* try next source */
+    }
+  }
+
+  throw new Error(`Failed to fetch SVG from ${url}`);
+}
+
+function createNodeFromSvgText(svgText: string, name: string, size: number): FrameNode {
   let node: FrameNode;
   try {
     node = figma.createNodeFromSvg(svgText);
@@ -246,18 +145,44 @@ async function tryCreateNodeFromSvg(svgText: string, name: string, size: number)
   const w = node.width > 0 ? node.width : getSVGDimensions(svgText).w;
   const h = node.height > 0 ? node.height : getSVGDimensions(svgText).h;
   const scale = size / Math.max(w, h);
-  const tw = Math.max(1, Math.round(w * scale));
-  const th = Math.max(1, Math.round(h * scale));
-  node.resize(tw, th);
+  node.resize(Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
   return node;
 }
 
 async function createLogoNode(svgUrl: string, name: string, size: number): Promise<FrameNode> {
   const svgText = await fetchSVGText(svgUrl);
-  return await tryCreateNodeFromSvg(svgText, name, size);
+  return createNodeFromSvgText(svgText, name, size);
 }
 
-// Single import
+function placeNode(node: FrameNode | ComponentNode, placement: "cursor" | "new-page", absX?: number, absY?: number): void {
+  if (absX !== undefined && absY !== undefined) {
+    figma.currentPage.appendChild(node);
+    node.x = absX - node.width / 2;
+    node.y = absY - node.height / 2;
+  } else {
+    const sel = figma.currentPage.selection;
+
+    if (sel.length === 1 && sel[0].type === "FRAME") {
+      const frame = sel[0] as FrameNode;
+      node.x = (frame.width - node.width) / 2;
+      node.y = (frame.height - node.height) / 2;
+      frame.appendChild(node);
+      return;
+    }
+
+    figma.currentPage.appendChild(node);
+    if (placement === "cursor") {
+      node.x = figma.viewport.center.x - node.width / 2;
+      node.y = figma.viewport.center.y - node.height / 2;
+    } else {
+      node.x = 100;
+      node.y = 100;
+    }
+  }
+  figma.currentPage.selection = [node];
+  figma.viewport.scrollAndZoomIntoView([node]);
+}
+
 async function importSingle(payload: {
   svgUrl: string;
   name: string;
@@ -269,7 +194,22 @@ async function importSingle(payload: {
 
   try {
     const node = await createLogoNode(svgUrl, name, size);
-    finalizeNode(node, { svgUrl, name, size, createComponent, placement });
+
+    if (createComponent) {
+      const comp = figma.createComponent();
+      comp.name = node.name;
+      comp.resize(node.width, node.height);
+      figma.currentPage.appendChild(comp);
+      placeNode(comp, placement);
+      node.x = 0;
+      node.y = 0;
+      comp.appendChild(node);
+      figma.currentPage.selection = [comp];
+      figma.viewport.scrollAndZoomIntoView([comp]);
+    } else {
+      placeNode(node, placement);
+    }
+
     figma.ui.postMessage({ type: "IMPORT_SUCCESS", name });
     figma.notify(`✓ ${name} imported`);
   } catch (err) {
@@ -280,132 +220,76 @@ async function importSingle(payload: {
   }
 }
 
-// Place / wrap in component & finish (shared logic)
-function finalizeNode(
-  node: FrameNode,
-  opts: {
-    svgUrl: string;
-    name: string;
-    size: number;
-    createComponent: boolean;
-    placement: "cursor" | "new-page";
-    absX?: number;
-    absY?: number;
-  },
-) {
-  const { createComponent, placement } = opts;
+function handleLogoDrop(event: DropEvent): boolean {
+  const { dropMetadata, absoluteX, absoluteY, items } = event;
+  const meta = (dropMetadata ?? {}) as DropMeta;
 
-  if (createComponent) {
-    const comp = figma.createComponent();
-    comp.name = node.name;
-    comp.resize(node.width, node.height);
-    figma.currentPage.appendChild(comp);
+  const item = items?.find(
+    (it) =>
+      it.type === "image/svg+xml" &&
+      typeof it.data === "string" &&
+      it.data.includes("<svg"),
+  );
 
-    if (opts.absX !== undefined && opts.absY !== undefined) {
-      comp.x = opts.absX - comp.width / 2;
-      comp.y = opts.absY - comp.height / 2;
-    } else if (placement === "cursor") {
-      comp.x = figma.viewport.center.x - comp.width / 2;
-      comp.y = figma.viewport.center.y - comp.height / 2;
-    } else {
-      comp.x = 100;
-      comp.y = 100;
-    }
-    node.x = 0;
-    node.y = 0;
-    comp.appendChild(node);
-    figma.currentPage.selection = [comp];
-    figma.viewport.scrollAndZoomIntoView([comp]);
-    return;
-  }
+  if (!item) return false;
 
-  if (opts.absX !== undefined && opts.absY !== undefined) {
-    figma.currentPage.appendChild(node);
-    node.x = opts.absX - node.width / 2;
-    node.y = opts.absY - node.height / 2;
-  } else {
-    placeNode(node, placement);
-  }
-  figma.currentPage.selection = [node];
-  figma.viewport.scrollAndZoomIntoView([node]);
-}
+  const name = meta.name ?? "SVG Logo";
+  const size = meta.size ?? 48;
+  const createComponent = meta.createComponent ?? false;
 
-// Drag-and-drop import using coordinate conversion
-async function importByCoord(payload: {
-  svgUrl: string;
-  name: string;
-  size: number;
-  createComponent: boolean;
-  placement: "cursor" | "new-page";
-  x?: number;
-  y?: number;
-}) {
-  const { svgUrl, name, size, createComponent } = payload;
-  try {
-    const node = await createLogoNode(svgUrl, name, size);
+  // async IIFE
+  (async () => {
+    try {
+      const node = figma.createNodeFromSvg(item.data);
+      node.name = name;
 
-    let absX: number | undefined;
-    let absY: number | undefined;
-
-    if (payload.x !== undefined && payload.y !== undefined) {
-      // Convert plugin-iframe screen-space coords → Figma canvas coords
-      const bounds = figma.viewport.bounds;
-      const zoom = figma.viewport.zoom;
-
-      // Try to query window outer size from UI via bounds*zoom estimation
-      const canvasPxW = bounds.width * zoom;
-      const canvasPxH = bounds.height * zoom;
-      // Plugin UI is a 340×560 floating panel hosted inside the Figma window.
-      // The drag clientX/Y is relative to the top-left of the iframe. To estimate
-      // canvas-space drop, treat the iframe origin as centered horizontally in the
-      // window, and offset vertically by the toolbar (~40px) when the UI is docked.
-      // Since we don't know the window size precisely, use viewport center as a
-      // best effort fallback when the estimate is obviously offscreen.
-      const estWinW = Math.max(canvasPxW, 1024);
-      const estWinH = Math.max(canvasPxH + 40, 768);
-      const uiLeft = Math.round((estWinW - 340) / 2);
-      const uiTop = 40 + Math.round(Math.max(0, (estWinH - 40 - 560) / 2));
-
-      const pxFromCanvasLeft = payload.x + uiLeft;
-      const pxFromCanvasTop = payload.y + uiTop;
-
-      const cx = bounds.x + pxFromCanvasLeft / zoom;
-      const cy = bounds.y + pxFromCanvasTop / zoom;
-
-      // If computed position is wildly inside the visible canvas, use it; otherwise
-      // fall back to the viewport center.
-      if (
-        cx >= bounds.x - 2000 &&
-        cx <= bounds.x + bounds.width + 2000 &&
-        cy >= bounds.y - 2000 &&
-        cy <= bounds.y + bounds.height + 2000
-      ) {
-        absX = cx;
-        absY = cy;
+      for (const child of node.children) {
+        if ("constraints" in child) {
+          child.constraints = { horizontal: "SCALE", vertical: "SCALE" };
+        }
       }
+
+      const w = node.width > 0 ? node.width : getSVGDimensions(item.data).w;
+      const h = node.height > 0 ? node.height : getSVGDimensions(item.data).h;
+      const scale = size / Math.max(w, h);
+      node.resize(Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
+
+      if (createComponent) {
+        const comp = figma.createComponent();
+        comp.name = node.name;
+        comp.resize(node.width, node.height);
+        figma.currentPage.appendChild(comp);
+
+        comp.x = absoluteX - comp.width / 2;
+        comp.y = absoluteY - comp.height / 2;
+
+        node.x = 0;
+        node.y = 0;
+        comp.appendChild(node);
+
+        figma.currentPage.selection = [comp];
+      } else {
+        figma.currentPage.appendChild(node);
+        node.x = absoluteX - node.width / 2;
+        node.y = absoluteY - node.height / 2;
+        figma.currentPage.selection = [node];
+      }
+
+      figma.ui.postMessage({ type: "IMPORT_SUCCESS", name });
+      figma.notify(`✓ ${name} imported`);
+
+    } catch (err) {
+      const detail = errMsg(err);
+      figma.ui.postMessage({ type: "IMPORT_ERROR", name, error: detail });
+      figma.notify(`Failed: ${name}`, { error: true });
+      console.error(`"${name}": ${detail}`);
     }
+  })();
 
-    finalizeNode(node, {
-      svgUrl,
-      name,
-      size,
-      createComponent,
-      placement: payload.placement,
-      absX,
-      absY,
-    });
-
-    figma.ui.postMessage({ type: "IMPORT_SUCCESS", name });
-    figma.notify(`✓ ${name} imported`);
-  } catch (err) {
-    const detail = errMsg(err);
-    figma.ui.postMessage({ type: "IMPORT_ERROR", name, error: detail });
-    figma.notify(`Failed: ${name}`, { error: true });
-    console.error(`dnd "${name}": ${detail}`);
-  }
+  return true;
 }
 
-// Batch import
+
 async function importBatch(payload: {
   logos: Array<{ svgUrl: string; name: string }>;
   size: number;
@@ -454,6 +338,6 @@ async function importBatch(payload: {
   figma.notify(
     failed.length > 0
       ? `${nodes.length} imported, ${failed.length} failed`
-      : `${nodes.length} logos imported`
+      : `${nodes.length} logos imported`,
   );
 }

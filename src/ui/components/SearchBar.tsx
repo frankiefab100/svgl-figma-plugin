@@ -14,18 +14,6 @@ export function SearchBar({ value, onChange, placeholder = "Search logos…", au
     if (autoFocus) setTimeout(() => ref.current?.focus(), 80);
   }, [autoFocus]);
 
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        ref.current?.focus();
-        ref.current?.select();
-      }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, []);
-
   return (
     <div style={s.wrap}>
       {/* Search icon */}
@@ -51,8 +39,6 @@ export function SearchBar({ value, onChange, placeholder = "Search logos…", au
           </svg>
         </button>
       )}
-
-      <kbd style={s.kbd}>⌘K</kbd>
     </div>
   );
 }
@@ -74,11 +60,5 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex", alignItems: "center", justifyContent: "center",
     border: "none", background: "transparent", color: "var(--text3)",
     cursor: "pointer", padding: 2, borderRadius: 3, flexShrink: 0,
-  },
-  kbd: {
-    fontSize: 10, color: "var(--text3)", background: "var(--surface)",
-    border: "1px solid var(--border)", borderRadius: 3,
-    padding: "1px 4px", whiteSpace: "nowrap", flexShrink: 0,
-    pointerEvents: "none", fontFamily: "var(--font)",
   },
 };

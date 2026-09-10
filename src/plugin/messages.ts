@@ -48,4 +48,4 @@ export type PluginToUIMessage =
       recent: unknown[];
       settings: unknown;
     };
-  };
+  }

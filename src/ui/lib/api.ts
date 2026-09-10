@@ -129,6 +129,24 @@ export function filterByQuery(logos: SVGLogo[], query: string): SVGLogo[] {
   return logos.filter((l) => l.title.toLowerCase().includes(q));
 }
 
+/** Fetch SVG text in the UI iframe (for pluginDrop items payload). */
+export async function fetchLogoSvg(url: string): Promise<string> {
+  const candidates = [toCdnUrl(url), toRawGithubUrl(url), url];
+
+  for (const candidate of candidates) {
+    try {
+      const res = await fetch(candidate);
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (text && text.includes("<svg")) return sanitizeSVG(text);
+    } catch {
+      /* try next source */
+    }
+  }
+
+  throw new Error(`Failed to fetch SVG from ${url}`);
+}
+
 // Message bridge helpers
 export function sendToPlugin(msg: object) {
   parent.postMessage({ pluginMessage: msg }, "*");

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { SVGLogo } from "../../types/svgl";
 import { resolveLogoUrl, hasVariants } from "../lib/api";
+import { prepareLogoDrag, completeLogoDrag } from "../lib/logoDrag";
 
 interface Props {
   logo: SVGLogo;
@@ -62,84 +63,19 @@ export function LogoCard({
       return;
     }
     e.stopPropagation();
-    e.dataTransfer.effectAllowed = "copyMove";
-    e.dataTransfer.dropEffect = "copy";
-
-    e.dataTransfer.setData("text/plain", logo.title);
-    e.dataTransfer.setData("text/uri-list", url);
-    e.dataTransfer.setData(
-      "application/x-svgl-logo",
-      JSON.stringify({
-        id: logo.id,
-        svgUrl: url,
-        name: logo.title,
-        size: 48,
-      }),
-    );
-
-    try {
-      const placeholder = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><title>${logo.title}</title></svg>`;
-      const file = new File([placeholder], `${logo.title}.svg`, {
-        type: "image/svg+xml",
-      });
-      if (e.dataTransfer.items) {
-        e.dataTransfer.items.add(file);
-      } else {
-        // @ts-ignore
-        e.dataTransfer.files = [file];
-      }
-    } catch (_) {
-      /* items API may not exist; ignore */
-    }
-
-    const img = new Image();
-    img.src = url;
-    img.width = 48;
-    img.height = 48;
-    try {
-      e.dataTransfer.setDragImage(img, 24, 24);
-    } catch (_) {
-      /* ignore */
-    }
+    prepareLogoDrag(e, { id: logo.id, svgUrl: url, name: logo.title, size: 48 });
   }
 
   function handleDragEnd(e: React.DragEvent<HTMLDivElement>) {
     if (batchMode) return;
-    // Don't proceed if the item was dropped inside the plugin window.
-    if ((e.view as unknown as { length: number })?.length === 0) return;
-
-    const svgUrl = resolveLogoUrl(logo.route, "light");
-    const payload = {
-      svgUrl,
+    completeLogoDrag(e, {
+      id: logo.id,
+      svgUrl: url,
       name: logo.title,
       size: 48,
-    };
-    // Dual approach: official pluginDrop + legacy pluginMessage (for Figma/browser combos that miss one)
-    parent.postMessage(
-      {
-        pluginDrop: {
-          clientX: e.clientX,
-          clientY: e.clientY,
-          dropMetadata: payload,
-        },
-      },
-      "*",
-    );
-    parent.postMessage(
-      {
-        pluginMessage: {
-          type: "IMPORT_LOGO_DROP",
-          payload: {
-            ...payload,
-            createComponent: false,
-            placement: "cursor",
-            x: e.clientX,
-            y: e.clientY,
-          },
-        },
-      },
-      "*",
-    );
+      createComponent: false,
+      placement: "cursor",
+    });
   }
 
   return (
