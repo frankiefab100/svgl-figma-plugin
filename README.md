@@ -60,7 +60,7 @@ Built with:
 3. Search for **"SVGL Logos for Figma"**
 4. Click **Install**
 
-## Setup (Development)
+## Local Development
 
 ### Prerequisites
 
@@ -88,11 +88,11 @@ npm run build
 
 This compiles `dist/index.html` and `dist/code.js`.
 
-4. Optional:
+4. Watch mode for rebuild (optional):
+
 ```bash
 npm run dev
 ```
-The Watch mode to rebuild on every code changes.
 
 ### Loading into Figma
 
@@ -105,7 +105,7 @@ The Watch mode to rebuild on every code changes.
 
 Contributions and feature suggestions are welcome! Feel free to open an issue or submit a pull request.
 
-Please review our [Code of Conduct](./CODE_OF_CONDUCT.md) before contributing.
+Please review the [Contributing Guide](./CONTRIBUTING.md) before contributing.
 
 ## 📜 License
 
@@ -116,7 +116,6 @@ This plugin is licensed under the **MIT License**. See [LICENSE](./LICENSE) for 
 ## 🙏 Acknowledgments
 
 * [pheralb](https://github.com/pheralb) and the contributors at [svgl.app](https://svgl.app) for maintaining the SVG logo library.
-* The [figma-plugin-drag-and-drop by jackiecorn](https://github.com/jackiecorn/figma-plugin-drag-and-drop) helped in the DnD implementation.
 * The [Figma Plugin API](https://developers.figma.com/docs/plugins) team.
 
 ## ⚠️ Disclaimer
