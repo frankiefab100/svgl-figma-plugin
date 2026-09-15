@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { ImportSettings } from "../../types/svgl";
 import { getSettings, saveSettings } from "../lib/storage";
 import { sendToPlugin } from "../lib/api";
+import { PanelHeader } from "./PanelHeader";
 
 interface Props {
   onClose: () => void;
@@ -29,35 +30,22 @@ export function SettingsPanel({ onClose }: Props) {
   }
 
   return (
-    <div style={s.wrap} className="animate-in">
-      {/* Header */}
-      <div style={s.header}>
-        <span style={s.title}>Settings</span>
-        <button onClick={onClose} style={s.closeBtn} aria-label="Close">
-          <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
-            <path
-              d="M4 4l8 8M12 4l-8 8"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      </div>
+    <div style={style.wrap} className="animate-in">
+      <PanelHeader title="Settings" onBack={onClose} />
 
-      <div style={s.body}>
+      <div style={style.body}>
         {/* Default size */}
         <Group label="Default Size">
-          <div style={s.row}>
+          <div style={style.row}>
             <input
               type="number"
               value={userSettings.defaultSize}
               min={16}
               max={256}
               onChange={(e) => set("defaultSize", +e.target.value)}
-              style={s.numInput}
+              style={style.numInput}
             />
-            <span style={s.unit}>px</span>
+            <span style={style.unit}>px</span>
           </div>
         </Group>
 
@@ -101,16 +89,16 @@ export function SettingsPanel({ onClose }: Props) {
 
         {/* Cache */}
         <Group label="Data & Cache">
-          <div style={s.cacheRow}>
-            <span style={s.cacheLabel}>Cache logos for faster search</span>
+          <div style={style.cacheRow}>
+            <span style={style.cacheLabel}>Cache logos for faster search</span>
             <ToggleSwitch
               on={userSettings.cacheEnabled}
               onChange={(v) => set("cacheEnabled", v)}
             />
           </div>
-          <div style={s.cacheRow}>
-            <span style={s.cacheLabel}>Clear cache</span>
-            <button onClick={clearCache} style={s.actionBtn}>
+          <div style={style.cacheRow}>
+            <span style={style.cacheLabel}>Clear cache</span>
+            <button onClick={clearCache} style={style.actionBtn}>
               {cleared ? "✓ Cleared" : "Refresh Cache"}
             </button>
           </div>
@@ -120,15 +108,15 @@ export function SettingsPanel({ onClose }: Props) {
 
         {/* About */}
         <Group label="About">
-          <div style={s.aboutRow}>
-            <span style={s.aboutName}>SVGL Logos for Figma</span>
-            <span style={s.version}>v1.0.0</span>
+          <div style={style.aboutRow}>
+            <span style={style.aboutName}>SVGL Logos for Figma</span>
+            <span style={style.version}>v1.0.0</span>
           </div>
-          <p style={s.aboutText}>
+          <p style={style.aboutText}>
             Powered by{" "}
             <a
               href="https://svgl.app"
-              style={s.link}
+              style={style.link}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -138,20 +126,20 @@ export function SettingsPanel({ onClose }: Props) {
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <a
               href="https://github.com/frankiefab100/svgl-figma-plugin"
-              style={s.link}
+              style={style.link}
             >
               View on GitHub
             </a>
             <a
               href="https://github.com/frankiefab100/svgl-figma-plugin/issues"
-              style={s.link}
+              style={style.link}
             >
               Report an issue
             </a>
           </div>
         </Group>
 
-        <p style={s.footer}>Made with ♥ for the design community.</p>
+        <p style={style.footer}>Made with ♥ for the design community.</p>
       </div>
     </div>
   );
@@ -259,7 +247,7 @@ function ToggleSwitch({
   );
 }
 
-const s: Record<string, React.CSSProperties> = {
+const style: Record<string, React.CSSProperties> = {
   wrap: { display: "flex", flexDirection: "column", height: "100%" },
   header: {
     display: "flex",

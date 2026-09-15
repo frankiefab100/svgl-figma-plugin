@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { SVGLogo } from "../../types/svgl";
 import { resolveLogoUrl } from "../lib/api";
 import { getSettings } from "../lib/storage";
+import { PanelHeader } from "./PanelHeader";
 
 interface BatchOpts {
   logos: Array<{ svgUrl: string; name: string }>;
@@ -16,10 +17,17 @@ interface Props {
   selected: Map<number, SVGLogo>;
   onImport: (opts: BatchOpts) => void;
   onClear: () => void;
+  onBack: () => void;
   onRemove: (id: number) => void;
 }
 
-export function BatchImport({ selected, onImport, onClear, onRemove }: Props) {
+export function BatchImport({
+  selected,
+  onImport,
+  onClear,
+  onBack,
+  onRemove,
+}: Props) {
   const userSettings = getSettings();
   const [layout, setLayout] = useState<"grid" | "row">("grid");
   const [cols, setCols] = useState(3);
@@ -45,10 +53,7 @@ export function BatchImport({ selected, onImport, onClear, onRemove }: Props) {
 
   return (
     <div style={style.wrap} className="animate-in">
-      <div style={style.header}>
-        <span style={style.title}>Batch Import</span>
-        <span style={style.sub}>Select multiple logos and import at once.</span>
-      </div>
+      <PanelHeader title="Batch Import" onBack={onBack} />
 
       {/* Count + clear */}
       <div style={style.countRow}>

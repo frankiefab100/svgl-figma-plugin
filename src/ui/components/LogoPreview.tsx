@@ -3,6 +3,7 @@ import type { SVGLogo } from "../../types/svgl";
 import { resolveLogoUrl, hasVariants } from "../lib/api";
 import { getSettings } from "../lib/storage";
 import { prepareLogoDrag, completeLogoDrag } from "../lib/logoDrag";
+import { PanelHeader } from "./PanelHeader";
 
 const SIZES = [24, 32, 48, 64, 128];
 
@@ -56,21 +57,7 @@ export function LogoPreview({
 
   return (
     <div style={style.wrap} className="animate-in">
-      {/* Header */}
-      <div style={style.header}>
-        <button onClick={onBack} style={style.back}>
-          <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
-            <path
-              d="M10 3L5 8l5 5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Back
-        </button>
-      </div>
+      <PanelHeader onBack={onBack} />
 
       {/* Preview canvas */}
       <div

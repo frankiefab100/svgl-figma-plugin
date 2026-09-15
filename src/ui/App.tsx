@@ -248,6 +248,7 @@ export default function App() {
           selected={batchMap}
           onImport={importBatch}
           onClear={() => setBatchMap(new Map())}
+          onBack={() => setView("main")}
           onRemove={(id) =>
             setBatchMap((m) => {
               const n = new Map(m);
