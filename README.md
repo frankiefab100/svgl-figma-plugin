@@ -40,7 +40,7 @@
 
 ## 🧩 Figma Community Link
 
-[Install SVGL Logos for Figma](https://www.figma.com/community/plugin/)
+[Install SVGL Logos for Figma](https://www.figma.com/community/plugin/1681508305173345973/svgl-logos-for-figma)
 
 ## 🛠️ Tech Stack
 
