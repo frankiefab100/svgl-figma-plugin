@@ -492,6 +492,7 @@ export default function App() {
             onToggleFavorite={handleToggleFavorite}
             onSelect={openPreview}
             onImport={quickImport}
+            onDragDrop={handleAddRecent}
             batchMode={batchMode}
             batchSelected={new Set(batchMap.keys())}
             onToggleBatch={toggleBatch}

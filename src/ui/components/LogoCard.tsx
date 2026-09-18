@@ -12,6 +12,7 @@ interface Props {
   onToggleFav?: () => void;
   onSelect: () => void;
   onImport: () => void;
+  onDragDrop?: () => void;
   onToggleBatch: () => void;
 }
 
@@ -24,6 +25,7 @@ export function LogoCard({
   onToggleFav,
   onSelect,
   onImport,
+  onDragDrop,
   onToggleBatch,
 }: Props) {
   const [hovered, setHovered] = useState(false);
@@ -63,7 +65,12 @@ export function LogoCard({
       return;
     }
     e.stopPropagation();
-    prepareLogoDrag(e, { id: logo.id, svgUrl: url, name: logo.title, size: 48 });
+    prepareLogoDrag(e, {
+      id: logo.id,
+      svgUrl: url,
+      name: logo.title,
+      size: 48,
+    });
   }
 
   function handleDragEnd(e: React.DragEvent<HTMLDivElement>) {
@@ -76,6 +83,7 @@ export function LogoCard({
       createComponent: false,
       placement: "cursor",
     });
+    onDragDrop?.();
   }
 
   return (

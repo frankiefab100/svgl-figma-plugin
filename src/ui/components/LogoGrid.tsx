@@ -12,6 +12,7 @@ interface Props {
   onToggleFavorite?: (id: number) => void;
   onSelect: (l: SVGLogo) => void;
   onImport: (l: SVGLogo) => void;
+  onDragDrop?: (l: SVGLogo) => void;
   batchMode?: boolean;
   batchSelected?: Set<number>;
   onToggleBatch?: (l: SVGLogo) => void;
@@ -25,6 +26,7 @@ export function LogoGrid({
   onToggleFavorite,
   onSelect,
   onImport,
+  onDragDrop,
   batchMode,
   batchSelected,
   onToggleBatch,
@@ -33,39 +35,8 @@ export function LogoGrid({
 
   const favSet = favIds instanceof Set ? favIds : new Set(favIds || []);
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const data = e.dataTransfer.getData("text/plain");
-    if (!data) return;
-    try {
-      const { id } = JSON.parse(data);
-      const logo = logos.find((l) => l.id === id);
-      if (!logo) return;
-      const payload = {
-        svgUrl: resolveLogoUrl(logo.route, "light"),
-        name: logo.title,
-        size: 48,
-        createComponent: false,
-        placement: "cursor",
-        x: e.clientX,
-        y: e.clientY,
-      };
-      sendToPlugin({ type: "IMPORT_LOGO_DROP", payload });
-    } catch {}
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  };
-
   return (
-    <div
-      style={style.grid}
-      role="list"
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-    >
+    <div style={style.grid} role="list">
       {logos.map((logo) => (
         <div key={logo.id} role="listitem">
           <LogoCard
@@ -77,6 +48,7 @@ export function LogoGrid({
             batchSelected={batchSelected?.has(logo.id)}
             onSelect={() => onSelect(logo)}
             onImport={() => onImport(logo)}
+            onDragDrop={() => onDragDrop?.(logo)}
             onToggleBatch={() => onToggleBatch?.(logo)}
           />
         </div>
