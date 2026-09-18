@@ -94,7 +94,6 @@ export default function App() {
           showToast(`${msg.name} imported`);
           break;
         case "IMPORT_ERROR":
-          // Show the real error detail so it's visible in the UI
           showToast(`Failed: ${msg.error || msg.name}`, "error");
           break;
         case "BATCH_SUCCESS":
@@ -277,8 +276,8 @@ export default function App() {
         <div style={layout.brand}>
           <img src={logo} alt="Plugin Logo" width="28" height="28" />
           <div>
-            <div style={layout.brandName}>SVGL Logos</div>
-            <div style={layout.brandSub}>Open source vector logos</div>
+            <div style={layout.brandName}>Import SVG Logos</div>
+            <div style={layout.brandSub}>open-source brand logos</div>
           </div>
         </div>
 
@@ -420,32 +419,57 @@ export default function App() {
 
       {/* Filter row */}
       <div style={layout.filterRow}>
-        {(["all", "recent", "favorites"] as Filter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => {
-              setFilter(f);
-              if (f !== "all") {
-                setQuery("");
-                setActiveCategory("All");
-              }
-            }}
-            style={{
-              ...layout.filterBtn,
-              ...(filter === f ? layout.filterOn : {}),
-            }}
-          >
-            {f === "all"
-              ? "All Logos"
-              : f === "recent"
-                ? recent.length > 0
-                  ? `Recent (${recent.length})`
-                  : "Recent"
-                : favIds.length > 0
-                  ? `Favorites (${favIds.length})`
-                  : "Favorites"}
-          </button>
-        ))}
+        {(["all", "recent", "favorites"] as Filter[]).map((f) => {
+          const isActive = filter === f;
+          let label = "";
+          let count = 0;
+
+          if (f === "all") {
+            label = "All Logos";
+            count = logos.length;
+          } else if (f === "recent") {
+            label = "Recent";
+            count = recent.length;
+          } else {
+            label = "Favorites";
+            count = favIds.length;
+          }
+
+          return (
+            <button
+              key={f}
+              onClick={() => {
+                setFilter(f);
+                if (f !== "all") {
+                  setQuery("");
+                  setActiveCategory("All");
+                }
+              }}
+              style={{
+                ...layout.filterBtn,
+                ...(isActive ? layout.filterOn : {}),
+              }}
+            >
+              {label}
+              {count > 0 && (
+                <span
+                  style={{
+                    ...layout.badge,
+                    background: isActive
+                      ? "rgba(13,153,255,0.1)"
+                      : "var(--bg2)",
+                    border: isActive
+                      ? "1px solid transparent"
+                      : "1px solid var(--border)",
+                    color: isActive ? "var(--accent)" : "var(--text3)",
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
 
         {/* refresh favorites badge */}
         {filter === "favorites" && (
@@ -454,7 +478,20 @@ export default function App() {
             style={layout.refreshBtn}
             title="Sync favorites"
           >
-            ↻
+            <svg
+              xmlns="http://w3.org"
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21.5 2v6h-6"></path>
+              <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.73-5.73"></path>
+            </svg>
           </button>
         )}
 
@@ -464,11 +501,6 @@ export default function App() {
           </button>
         )}
       </div>
-
-      {/* Count */}
-      {!isLoading && !error && filter === "all" && logos.length > 0 && (
-        <div style={layout.count}>{logos.length.toLocaleString()} logos</div>
-      )}
 
       {/* Logo grid / states */}
       <div style={layout.scroll}>
@@ -616,7 +648,6 @@ function SettingsIcon() {
   );
 }
 
-/* layout styles */
 const layout: Record<string, React.CSSProperties> = {
   root: {
     display: "flex",
@@ -648,14 +679,13 @@ const layout: Record<string, React.CSSProperties> = {
     justifyContent: "center",
   },
   brandName: {
-    fontSize: 13,
-    fontWeight: 700,
+    fontSize: 12,
+    fontWeight: 600,
     color: "var(--text)",
     lineHeight: "16px",
   },
   brandSub: { fontSize: 10, color: "var(--text3)", lineHeight: "13px" },
   actions: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0 },
-
   batchBanner: {
     display: "flex",
     alignItems: "center",
@@ -694,11 +724,14 @@ const layout: Record<string, React.CSSProperties> = {
   filterRow: {
     display: "flex",
     alignItems: "center",
-    gap: 2,
+    gap: 8,
     padding: "6px 12px 0",
     flexShrink: 0,
   },
   filterBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
     border: "none",
     background: "transparent",
     color: "var(--text3)",
@@ -713,6 +746,17 @@ const layout: Record<string, React.CSSProperties> = {
     borderBottomColor: "var(--accent)",
     fontWeight: 600,
   },
+  badge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "100px",
+    padding: "0 5px",
+    fontSize: 9,
+    fontWeight: 600,
+    height: 15,
+    lineHeight: 1,
+  },
   refreshBtn: {
     border: "none",
     background: "transparent",
@@ -721,6 +765,8 @@ const layout: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: "0 4px",
     lineHeight: 1,
+    display: "flex",
+    alignItems: "center",
   },
   clearBtn: {
     marginLeft: "auto",
@@ -730,12 +776,6 @@ const layout: Record<string, React.CSSProperties> = {
     fontSize: 10,
     fontFamily: "var(--font)",
     cursor: "pointer",
-  },
-  count: {
-    padding: "4px 12px 0",
-    fontSize: 10,
-    color: "var(--text3)",
-    flexShrink: 0,
   },
   scroll: {
     flex: 1,
@@ -755,7 +795,6 @@ const layout: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   fLink: { color: "var(--accent)", textDecoration: "none" },
-
   overlay: {
     position: "fixed",
     inset: 0,
